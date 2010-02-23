@@ -53,7 +53,7 @@ void WorldSession::HandleDuelAcceptedOpcode(WorldPacket& recvPacket)
     plTarget->SendDuelCountdown(3000);
 // Remove cooldowns and reset HP/mana at duel
     pl->RemoveAllSpellCooldown();
-    plTarget->RemoveArenaSpellCooldown();
+    plTarget->RemoveAllSpellCooldown();
     pl->SetHealth(pl->GetMaxHealth());
     pl->SetPower(POWER_MANA, pl->GetMaxPower(POWER_MANA));
     plTarget->SetHealth(plTarget->GetMaxHealth());
