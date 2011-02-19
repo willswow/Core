@@ -24,13 +24,229 @@
 #include "Corpse.h"
 #include "Player.h"
 #include "Vehicle.h"
-#include "SpellAuras.h"
 #include "MapManager.h"
 #include "Transport.h"
 #include "Battleground.h"
 #include "WaypointMovementGenerator.h"
 #include "InstanceSaveMgr.h"
 #include "ObjectMgr.h"
+#include "World.h"
+
+//#define __ANTI_DEBUG__
+
+#ifdef __ANTI_DEBUG__
+#include "Chat.h"
+std::string FlagsToStr(const uint32 Flags)
+{
+    std::string Ret="";
+    if(Flags==0)
+    {
+        Ret="None";
+        return Ret;
+    }
+
+    if(Flags &amp; MOVEMENTFLAG_FORWARD)
+    {   Ret+="FW "; }
+    if(Flags &amp; MOVEMENTFLAG_BACKWARD)
+    {   Ret+="BW "; }
+    if(Flags &amp; MOVEMENTFLAG_STRAFE_LEFT)
+    {   Ret+="STL ";    }
+    if(Flags &amp; MOVEMENTFLAG_STRAFE_RIGHT)
+    {   Ret+="STR ";    }
+    if(Flags &amp; MOVEMENTFLAG_LEFT)
+    {   Ret+="LF "; }
+    if(Flags &amp; MOVEMENTFLAG_RIGHT)
+    {   Ret+="RI "; }
+    if(Flags &amp; MOVEMENTFLAG_PITCH_UP)
+    {   Ret+="PTUP ";   }
+    if(Flags &amp; MOVEMENTFLAG_PITCH_DOWN)
+    {   Ret+="PTDW ";   }
+    if(Flags &amp; MOVEMENTFLAG_WALK_MODE)
+    {   Ret+="WALK ";   }
+    if(Flags &amp; MOVEMENTFLAG_ONTRANSPORT)
+    {   Ret+="TRANS ";  }
+    if(Flags &amp; MOVEMENTFLAG_LEVITATING)
+    {   Ret+="LEVI ";   }
+    if(Flags &amp; MOVEMENTFLAG_FLY_UNK1)
+    {   Ret+="FLYUNK1 ";    }
+    if(Flags &amp; MOVEMENTFLAG_JUMPING)
+    {   Ret+="JUMP ";   }
+    if(Flags &amp; MOVEMENTFLAG_UNK4)
+    {   Ret+="UNK4 ";   }
+    if(Flags &amp; MOVEMENTFLAG_FALLING)
+    {   Ret+="FALL ";   }
+    if(Flags &amp; MOVEMENTFLAG_SWIMMING)
+    {   Ret+="SWIM ";   }
+    if(Flags &amp; MOVEMENTFLAG_FLY_UP)
+    {   Ret+="FLYUP ";  }
+    if(Flags &amp; MOVEMENTFLAG_CAN_FLY)
+    {   Ret+="CFLY ";   }
+    if(Flags &amp; MOVEMENTFLAG_FLYING)
+    {   Ret+="FLY ";    }
+    if(Flags &amp; MOVEMENTFLAG_FLYING2)
+    {   Ret+="FLY2 ";   }
+    if(Flags &amp; MOVEMENTFLAG_WATERWALKING)
+    {   Ret+="WTWALK "; }
+    if(Flags &amp; MOVEMENTFLAG_SAFE_FALL)
+    {   Ret+="SAFE ";   }
+    if(Flags &amp; MOVEMENTFLAG_UNK3)
+    {   Ret+="UNK3 ";   }
+    if(Flags &amp; MOVEMENTFLAG_SPLINE)
+    {   Ret+="SPLINE ";     }
+    if(Flags &amp; MOVEMENTFLAG_SPLINE2)
+    {   Ret+="SPLINE2 ";    }
+
+    return Ret;
+}
+#endif // __ANTI_DEBUG__
+
+bool WorldSession::Anti__ReportCheat(const char* Reason,float Speed,const char* Op,float Val1,uint32 Val2,MovementInfo* MvInfo)
+{
+    if(!Reason)
+    {
+        sLog-&gt;outError("Anti__ReportCheat: Missing Reason parameter!");
+        return false;
+    }
+
+    const char* Player = GetPlayer()-&gt;GetName();
+    uint32 Acc = GetPlayer()-&gt;GetSession()-&gt;GetAccountId();
+    uint32 Map = GetPlayer()-&gt;GetMapId();
+    uint32 zone_id = GetPlayer()-&gt;GetZoneId();
+    uint32 area_id = GetPlayer()-&gt;GetAreaId();
+    float startX = 0.0f;
+	float startY = 0.0f;
+	float startZ = 0.0f;
+    float endX = 0.0f;
+	float endY = 0.0f;
+	float endZ = 0.0f;
+    uint32 fallTime = 0;
+    uint32 t_guid = 0;
+    uint32 flags = 0;
+
+    MapEntry const* mapEntry = sMapStore.LookupEntry(GetPlayer()-&gt;GetMapId());
+    AreaTableEntry const* zoneEntry = GetAreaEntryByAreaID(zone_id);
+    AreaTableEntry const* areaEntry = GetAreaEntryByAreaID(area_id);
+
+    std::string mapName(mapEntry ? mapEntry-&gt;name[GetSessionDbcLocale()] : "&lt;unknown&gt;");
+    std::string zoneName(zoneEntry ? zoneEntry-&gt;area_name[GetSessionDbcLocale()] : "&lt;unknown&gt;");
+    std::string areaName(areaEntry ? areaEntry-&gt;area_name[GetSessionDbcLocale()] : "&lt;unknown&gt;");
+
+    CharacterDatabase.escape_string(mapName);
+    CharacterDatabase.escape_string(zoneName);
+    CharacterDatabase.escape_string(areaName);
+
+    if(!Player)
+    {
+        sLog-&gt;outError("Anti__ReportCheat: Player with no name?!?");
+        return false;
+    }
+
+    QueryResult Res=CharacterDatabase.PQuery("SELECT speed,Val1 FROM cheaters WHERE player='%s' AND reason LIKE '%s' AND Map='%u' AND last_date &gt;= NOW()-300",Player,Reason,Map);
+    if(Res)
+    {
+        Field* Fields = Res-&gt;Fetch();
+
+        std::stringstream Query;
+        Query &lt;&lt; "UPDATE cheaters SET count=count+1,last_date=NOW()";
+        Query.precision(5);
+        if(Speed&gt;0.0f &amp;&amp; Speed &gt; Fields[0].GetFloat())
+        {
+            Query &lt;&lt; ",speed='";
+            Query &lt;&lt; std::fixed &lt;&lt; Speed;
+            Query &lt;&lt; "'";
+        }
+
+        if(Val1&gt;0.0f &amp;&amp; Val1 &gt; Fields[1].GetFloat())
+        {
+            Query &lt;&lt; ",Val1='";
+            Query &lt;&lt; std::fixed &lt;&lt; Val1;
+            Query &lt;&lt; "'";
+        }
+
+        Query &lt;&lt; " WHERE player='" &lt;&lt; Player &lt;&lt; "' AND reason='" &lt;&lt; Reason &lt;&lt; "' AND Map='" &lt;&lt; Map &lt;&lt; "' AND last_date &gt;= NOW()-300 ORDER BY entry DESC LIMIT 1";
+
+        CharacterDatabase.Execute(Query.str().c_str());
+    }
+    else
+    {
+        if(!Op)
+        {   Op="";  }
+
+        startX = GetPlayer()-&gt;GetPositionX();
+        startY = GetPlayer()-&gt;GetPositionY();
+        startZ = GetPlayer()-&gt;GetPositionZ();
+
+        if(MvInfo)
+        {
+            fallTime = MvInfo-&gt;fallTime;
+            flags = MvInfo-&gt;flags;
+            t_guid = MvInfo-&gt;t_guid;
+
+            endX = MvInfo-&gt;pos.GetPositionX();
+            endY = MvInfo-&gt;pos.GetPositionY();
+            endZ = MvInfo-&gt;pos.GetPositionZ();
+        }
+
+        CharacterDatabase.PExecute("INSERT INTO cheaters (player,acctid,reason,speed,count,first_date,last_date,Op,Val1,Val2,Map,mapEntry,zone_id,zoneEntry,area_id,areaEntry,Level,startX,startY,startZ,endX,endY,endZ,t_guid,flags,fallTime) "
+                                   "VALUES ('%s','%u','%s','%f','1',NOW(),NOW(),'%s','%f','%u','%u','%s','%u','%s','%u','%s','%u','%f','%f','%f','%f','%f','%f','%u','%u','%u')",
+                                   Player,Acc,Reason,Speed,Op,Val1,Val2,
+                                   Map, mapName.c_str(),
+                                   zone_id, zoneName.c_str(),
+                                   area_id, areaName.c_str(),
+                                   GetPlayer()-&gt;getLevel(),
+                                   startX,startY,startZ,
+                                   endX,endY,endZ,
+                                   t_guid,flags,t_guid);
+    }
+
+    if(sWorld-&gt;GetMvAnticheatKill() &amp;&amp; GetPlayer()-&gt;isAlive())
+    {
+        GetPlayer()-&gt;DealDamage(GetPlayer(), GetPlayer()-&gt;GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
+    }
+    if(sWorld-&gt;GetMvAnticheatKick())
+    {
+        GetPlayer()-&gt;GetSession()-&gt;KickPlayer();
+    }
+    if(sWorld-&gt;GetMvAnticheatBan() &amp; 1)
+    {
+        sWorld-&gt;BanAccount(BAN_CHARACTER,Player,sWorld-&gt;GetMvAnticheatBanTime(),"Cheat","Anticheat");
+    }
+    if(sWorld-&gt;GetMvAnticheatBan() &amp; 2)
+    {
+        QueryResult result = LoginDatabase.PQuery("SELECT last_ip FROM account WHERE id=%u", Acc);
+        if(result)
+        {
+            Field *fields = result-&gt;Fetch();
+            std::string LastIP = fields[0].GetString();
+            if(!LastIP.empty())
+            {
+                sWorld-&gt;BanAccount(BAN_IP,LastIP,sWorld-&gt;GetMvAnticheatBanTime(),"Cheat","Anticheat");
+            }
+        }
+    }
+    return true;
+}
+
+bool WorldSession::Anti__CheatOccurred(uint32 CurTime,const char* Reason,float Speed,const char* Op,
+                                float Val1,uint32 Val2,MovementInfo* MvInfo)
+{
+    if(!Reason)
+    {
+        sLog-&gt;outError("Anti__CheatOccurred: Missing Reason parameter!");
+        return false;
+    }
+
+    GetPlayer()-&gt;m_anti_lastalarmtime = CurTime;
+    GetPlayer()-&gt;m_anti_alarmcount = GetPlayer()-&gt;m_anti_alarmcount + 1;
+
+    if (GetPlayer()-&gt;m_anti_alarmcount &gt; sWorld-&gt;GetMvAnticheatAlarmCount())
+    {
+        Anti__ReportCheat(Reason,Speed,Op,Val1,Val2,MvInfo);
+        return true;
+    }
+    return false;
+}
+
 
 void WorldSession::HandleMoveWorldportAckOpcode(WorldPacket & /*recv_data*/)
 {
@@ -301,6 +517,11 @@ void WorldSession::HandleMovementOpcodes(WorldPacket & recv_data)
         // if we boarded a transport, add us to it
         if (plMover && !plMover->GetTransport())
         {
+            float trans_rad = movementInfo.t_pos.GetPositionX()*movementInfo.t_pos.GetPositionX() + movementInfo.t_pos.GetPositionY()*movementInfo.t_pos.GetPositionY() + movementInfo.t_pos.GetPositionZ()*movementInfo.t_pos.GetPositionZ();
+            if (trans_rad &gt; 3600.0f) // transport radius = 60 yards //cheater with on_transport_flag
+            {
+	            return;
+            }
             // elevators also cause the client to send MOVEMENTFLAG_ONTRANSPORT - just unmount if the guid can be found in the transport list
             for (MapManager::TransportSet::const_iterator iter = sMapMgr->m_Transports.begin(); iter != sMapMgr->m_Transports.end(); ++iter)
             {
