@@ -11,6 +11,7 @@
 if( WITH_SQL )
   install(
     DIRECTORY
+      beastmaster
       updates
       scripts
       base

@@ -43,6 +43,10 @@ void AddSC_example_spell_scripts();
 
 void AddSC_SmartSCripts();
 
+
+// Custom
+void AddSC_Npc_Beastmaster();
+
 //Commands
 void AddSC_account_commandscript();
 void AddSC_achievement_commandscript();
