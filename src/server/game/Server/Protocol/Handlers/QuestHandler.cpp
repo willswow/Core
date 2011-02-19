@@ -698,7 +698,6 @@ void WorldSession::HandleQuestgiverStatusMultipleQuery(WorldPacket& /*recvPacket
         {
             // need also pet quests case support
             Creature *questgiver = ObjectAccessor::GetCreatureOrPetOrVehicle(*GetPlayer(),*itr);
-
             if (!questgiver || questgiver->IsHostileTo(_player))
                 continue;
             if (!questgiver->HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_QUESTGIVER))

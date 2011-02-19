@@ -33,10 +33,6 @@
 #include "MapInstanced.h"
 #include "Util.h"
 #include "LFGMgr.h"
-//Playerbot mod
-#include "Config.h"
-#include "PlayerbotAI.h"
-#include "PlayerbotClassAI.h"
 
 Roll::Roll(uint64 _guid, LootItem const& li) : itemGUID(_guid), itemid(li.itemid),
 itemRandomPropId(li.randomPropertyId), itemRandomSuffix(li.randomSuffix), itemCount(li.count),
@@ -109,7 +105,7 @@ bool Group::Create(Player *leader)
     if (m_groupType & GROUPTYPE_RAID)
         _initRaidSubGroupsCounter();
 
-    m_lootMethod = (LootMethod)sConfig->GetIntDefault("Bot.LootMethod", 2);
+    m_lootMethod = GROUP_LOOT;
     m_lootThreshold = ITEM_QUALITY_UNCOMMON;
     m_looterGuid = leaderGuid;
 
@@ -412,38 +408,6 @@ bool Group::AddMember(Player *player)
 uint32 Group::RemoveMember(const uint64 &guid, const RemoveMethod &method /* = GROUP_REMOVEMETHOD_DEFAULT */, uint64 kicker /* = 0 */, const char* reason /* = NULL */)
 {
     BroadcastGroupUpdate();
-    {
-        Player *player = sObjectMgr->GetPlayer(guid);
-
-        if(player)
-        {
-            //Log out any Playerbots by the player
-            WorldSession *session = player->GetSession();
-
-            //save the map of playerbots first because if the map gets altered when
-            //a playerbot logs out which will corrupt the for loop
-            PlayerBotMap m_playerBots;
-            for(PlayerBotMap::const_iterator itr = session->GetPlayerBotsBegin(); itr != session->GetPlayerBotsEnd(); ++itr)
-            {
-                Player *bot = itr->second;
-                (m_playerBots)[itr->first] = bot;
-            }
-
-            //now log out any playerbots it may have
-            for(PlayerBotMap::const_iterator itr2 = m_playerBots.begin(); itr2 != m_playerBots.end(); ++itr2)
-            {
-                Player *bot = itr2->second;
-                session->LogoutPlayerBot(bot->GetGUID(),true);
-            }
-        }
-
-        //if the player manually removes himself from group, remove npc bot
-        if(player && player->HaveBot())
-        {
-            _removeMember(player->GetBot()->GetGUID());
-            player->SetBotMustDie();
-        }
-    }
 
     sScriptMgr->OnGroupRemoveMember(this, guid, method, kicker, reason);
 
@@ -487,9 +451,6 @@ uint32 Group::RemoveMember(const uint64 &guid, const RemoveMethod &method /* = G
             player->GetSession()->SendPacket(&data);
 
             _homebindIfInstance(player);
-        } else if(!player && method == 99){ //not a valid player and method == 99 mean I'm a bot
-            _removeMember(guid);
-            SendUpdate();
         }
 
         // Remove player from group in DB
@@ -609,7 +570,6 @@ void Group::Disband(bool hideDestroy /* = false */)
     sScriptMgr->OnGroupDisband(this);
 
     Player *player;
-
     for (member_citerator citr = m_memberSlots.begin(); citr != m_memberSlots.end(); ++citr)
     {
         player = sObjectMgr->GetPlayer(citr->guid);
@@ -1196,34 +1156,6 @@ void Group::CountTheRoll(Rolls::iterator rollI, uint32 NumberOfPlayers)
     delete roll;
 }
 
-//
-// Bot changes
-//
-uint64 Group::GetTargetWithIconByGroup(uint64 guid)
-{
-  //  if (icon >= TARGETICONCOUNT) return 0;
-
-    uint64 targetGUID = 0;
-
-    switch(GetMemberGroup(guid))
-    {
-    case 0: targetGUID = m_targetIcons[STAR]; break;
-    case 1: targetGUID = m_targetIcons[CIRCLE]; break;
-    case 2: targetGUID = m_targetIcons[DIAMOND]; break;
-    case 3: targetGUID = m_targetIcons[TRIANGLE]; break;
-    case 4: targetGUID = m_targetIcons[MOON]; break;
-    case 5: targetGUID = m_targetIcons[SQUARE]; break;
-    case 6: targetGUID = m_targetIcons[CROSS]; break;
-    default: break;
-    }
-
-    // if no target icon, default to star
-    if (targetGUID==0) m_targetIcons[STAR];
-
-   return targetGUID;
-} // end getTargetWithIcon
-
-
 void Group::SetTargetIcon(uint8 id, uint64 whoGuid, uint64 targetGuid)
 {
     if (id >= TARGETICONCOUNT)
@@ -1289,34 +1221,23 @@ void Group::SendTargetIconList(WorldSession *session)
 
 void Group::SendUpdate()
 {
-    member_citerator prevCitr, citr3;
-    bool foundBot = false;
     Player *player;
-	uint64 value = 0;
     for (member_citerator citr = m_memberSlots.begin(); citr != m_memberSlots.end(); ++citr)
     {
         player = sObjectMgr->GetPlayer(citr->guid);
-
         if (!player || !player->GetSession() || player->GetGroup() != this)
             continue;
-        uint64& botGuid= *((uint64*)&value);
-        if(player->HaveBot())
-        {
-            if(Creature *ci = player->GetBot())
-            {
-                botGuid = (uint64&)ci->GetGUID();
-            }
-        }
+
         WorldPacket data(SMSG_GROUP_LIST, (1+1+1+1+1+4+8+4+4+(GetMembersCount()-1)*(13+8+1+1+1+1)+8+1+8+1+1+1+1));
         data << uint8(m_groupType);                         // group type (flags in 3.3)
         data << uint8(citr->group);
         data << uint8(citr->flags);
         data << uint8(citr->roles);
-        /* TESTING */if (isLFGGroup())
+        if (isLFGGroup())
         {
             data << uint8(sLFGMgr->GetState(m_guid) == LFG_STATE_FINISHED_DUNGEON ? 2 : 0); // FIXME - Dungeon save status? 2 = done
             data << uint32(sLFGMgr->GetDungeon(m_guid));
-        }/* TESTING */
+        }
 
         data << uint64(m_guid);
         data << uint32(m_counter++);                        // 3.3, value increases every time this packet gets sent
@@ -1331,20 +1252,12 @@ void Group::SendUpdate()
             uint8 onlineState = (member) ? MEMBER_STATUS_ONLINE : MEMBER_STATUS_OFFLINE;
             onlineState = onlineState | ((isBGGroup()) ? MEMBER_STATUS_PVP : 0);
 
-            /* TESTING */citr3 = citr2;
-            if (citr2->guid == botGuid)
-            {
-               value = 0;
-               botGuid=*((uint64*)&value); // reset
-            }
-            data << citr3->name;
-            data << uint64(citr3->guid);                    // guid
+            data << citr2->name;
+            data << uint64(citr2->guid);                    // guid
             data << uint8(onlineState);                     // online-state
             data << uint8(citr2->group);                    // groupid
             data << uint8(citr2->flags);                    // See enum GroupMemberFlags
             data << uint8(citr2->roles);                    // Lfg Roles
-
-            if(foundBot) foundBot = false;/* TESTING */
         }
 
         data << uint64(m_leaderGuid);                       // leader guid
@@ -1431,26 +1344,6 @@ bool Group::_setMembersGroup(const uint64 &guid, const uint8 &group)
 
     if (!isBGGroup())
         CharacterDatabase.PExecute("UPDATE group_member SET subgroup='%u' WHERE memberGuid='%u'", group, GUID_LOPART(guid));
-
-    Player *pPlayer = sObjectMgr->GetPlayer(guid);
-    if (pPlayer->GetPlayerbotAI()!=NULL) {
-        if (apply) {
-            pPlayer->HandleEmoteCommand(EMOTE_ONESHOT_ROAR);        // if pBot is maintank, acknowledge it
-        } else {
-            pPlayer->HandleEmoteCommand(EMOTE_ONESHOT_CRY);
-        }
-    }
-
-    // tell all the bots who is the main tank now
-    if (apply)
-        for (GroupReference *itr = GetFirstMember(); itr != NULL; itr = itr->next())
-        {
-            Player* tPlayer = itr->getSource();
-            PlayerbotAI *ai = tPlayer->GetPlayerbotAI();
-            ai->GetClassAI();
-            if (tPlayer->IsPlayerbot())
-                tPlayer->GetPlayerbotAI()->GetClassAI()->SetMainTank(sObjectMgr->GetPlayer(guid));
-        }
 
     return true;
 }

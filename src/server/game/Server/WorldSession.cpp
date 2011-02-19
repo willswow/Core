@@ -84,10 +84,6 @@ bool WorldSessionFilter::Process(WorldPacket *packet)
     return (plr->IsInWorld() == false);
 }
 
-//Playerbot mod
-#include "PlayerbotAI.h"
-#include "PlayerbotClassAI.h"
-
 /// WorldSession constructor
 WorldSession::WorldSession(uint32 id, WorldSocket *sock, AccountTypes sec, uint8 expansion, time_t mute_time, LocaleConstant locale, uint32 recruiter):
 m_muteTime(mute_time), m_timeOutTime(0), _player(NULL), m_Socket(sock),
@@ -110,11 +106,7 @@ m_latency(0), m_TutorialsChanged(false), recruiterId(recruiter)
 /// WorldSession destructor
 WorldSession::~WorldSession()
 {
-    //Playerbot mod: log out any PlayerBots owned in this WorldSession
-    while(!m_playerBots.empty())
-    LogoutPlayerBot(m_playerBots.begin()->first, true);
-
-	///- unload player if not unloaded
+    ///- unload player if not unloaded
     if (_player)
         LogoutPlayer (true);
 
@@ -149,13 +141,6 @@ char const *WorldSession::GetPlayerName() const
 /// Send a packet to the client
 void WorldSession::SendPacket(WorldPacket const *packet)
 {
-    //Playerbot mod: send packet to bot AI
-   /* if(GetPlayer() && GetPlayer()->GetPlayerbotAI()) {
-            GetPlayer()->GetPlayerbotAI()->HandleBotOutgoingPacket(*packet);
-    } else if(!m_playerBots.empty()) {
-            PlayerbotAI::HandleMasterOutgoingPacket(*packet, *this);
-    }*/
-
     if (!m_Socket)
         return;
 
@@ -227,8 +212,8 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
 
     ///- Before we process anything:
     /// If necessary, kick the player from the character select screen
-    /*if (IsConnectionIdle())
-        m_Socket->CloseSocket();*/
+    if (IsConnectionIdle())
+        m_Socket->CloseSocket();
 
     ///- Retrieve packets from the receive queue and call the appropriate handlers
     /// not process packets if socket already closed
@@ -274,11 +259,6 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
                             (this->*opHandle.handler)(*packet);
                             if (sLog->IsOutDebug() && packet->rpos() < packet->wpos())
                                 LogUnprocessedTail(packet);
-
-                            // Playerbot mod: if this player has bots let the
-                            // botAI see the masters packet
-                            if(!m_playerBots.empty())
-                                PlayerbotAI::HandleMasterIncomingPacket(*packet, *this);
                         }
                         break;
                     case STATUS_TRANSFER:
@@ -349,28 +329,6 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
         ///- If necessary, log the player out
         if (ShouldLogOut(currTime) && !m_playerLoading)
             LogoutPlayer(true);
-    //Playerbot mod - Process player bot packets
-    //The PlayerbotAI class adds to the packet queue to simulate a real player
-    //since Playerbots are known to the World obj only its master's
-    //WorldSession object we need to process all master's bot's packets.
-        for(PlayerBotMap::const_iterator itr = GetPlayerBotsBegin(); itr != GetPlayerBotsEnd(); ++itr)
-        {
-            Player *const botPlayer = itr->second;
-            WorldSession *const pBotWorldSession = botPlayer->GetSession();
-            if(botPlayer->IsBeingTeleportedFar())
-            {
-              pBotWorldSession->HandleMoveWorldportAckOpcode();
-          } else if(botPlayer->IsInWorld())
-          {
-              WorldPacket *packet;
-              while(pBotWorldSession->_recvQueue.next(packet))
-              {
-                  OpcodeHandler &opHandle = opcodeTable[packet->GetOpcode()];
-                  (pBotWorldSession->*opHandle.handler)(*packet);
-                  delete packet;
-              }
-          }
-        }
 
         ///- Cleanup socket pointer if need
         if (m_Socket && m_Socket->IsClosed())
@@ -388,25 +346,6 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
 /// %Log the player out
 void WorldSession::LogoutPlayer(bool Save)
 {
-    if (!_player)
-    {
-        return;
-    }
-
-    if (_player->IsMounted()) _player->Unmount();
-
-     // in case it has a minion, kill it
-    if(_player->HaveBot())
-    {
-         _player->GetBot()->SetCharmerGUID(0);
-         _player->GetBot()->RemoveFromWorld();
-         _player->RemoveBot();
-    }
-
-     //Playerbot mod: log out all player bots owned by this toon
-     while(!m_playerBots.empty())
-     LogoutPlayerBot(m_playerBots.begin()->first, Save);
-
     // finish pending transfers before starting the logout
     while (_player && _player->IsBeingTeleportedFar())
         HandleMoveWorldportAckOpcode();
@@ -527,7 +466,7 @@ void WorldSession::LogoutPlayer(bool Save)
 
         // remove player from the group if he is:
         // a) in group; b) not in raid group; c) logging out normally (not being kicked or disconnected)
-        if ((_player->GetGroup() && !_player->GetGroup()->isRaidGroup() && m_Socket) || (_player->IsPlayerbot() && _player->GetGroup()))
+        if (_player->GetGroup() && !_player->GetGroup()->isRaidGroup() && m_Socket)
             _player->RemoveFromGroup();
 
         ///- Send update to group and reset stored max enchanting level
@@ -551,7 +490,6 @@ void WorldSession::LogoutPlayer(bool Save)
         _player->CleanupsBeforeDelete();
         sLog->outChar("Account: %d (IP: %s) Logout Character:[%s] (GUID: %u)", GetAccountId(), GetRemoteAddress().c_str(), _player->GetName() ,_player->GetGUIDLow());
         Map *_map = _player->GetMap();
-		uint32 guid = _player->GetGUIDLow();
         _map->Remove(_player, true);
         SetPlayer(NULL);                                    // deleted in Remove call
 
@@ -561,7 +499,7 @@ void WorldSession::LogoutPlayer(bool Save)
 
         ///- Since each account can only have one online character at any given time, ensure all characters for active account are marked as offline
         //No SQL injection as AccountId is uint32
-        CharacterDatabase.PExecute("UPDATE characters SET online = 0 WHERE guid = '%u'", guid);
+        CharacterDatabase.PExecute("UPDATE characters SET online = 0 WHERE account = '%u'", GetAccountId());
         sLog->outDebug("SESSION: Sent SMSG_LOGOUT_COMPLETE Message");
     }
 
@@ -661,41 +599,6 @@ void WorldSession::LoadGlobalAccountData()
     PreparedStatement *stmt = CharacterDatabase.GetPreparedStatement(CHAR_LOAD_ACCOUNT_DATA);
     stmt->setUInt32(0, GetAccountId());
     LoadAccountData(CharacterDatabase.Query(stmt), GLOBAL_CACHE_MASK);
-}
-
-//Playerbot mod: logs out a Playerbot.
-void WorldSession::LogoutPlayerBot(uint64 guid, bool Save)
-{
-    Player *pPlayerBot = GetPlayerBot(guid);
-
-    if(pPlayerBot) //log out any playbots I have
-    {
-        //if (pPlayerBot->IsMounted()) pPlayerBot->GetPlayerbotAI()->GetClassAI()->Unmount();
-
-        pPlayerBot->CombatStop();
-        if(pPlayerBot->HaveBot())
-            pPlayerBot->SetBotMustDie();
-
-        // remove from group
-        Group* m_group = pPlayerBot->GetGroup();
-        if (m_group) {
-            if (m_group->RemoveMember(pPlayerBot->GetGUID(),GROUP_REMOVEMETHOD_DEFAULT) <= 1) {
-                delete m_group;
-            }
-        }
-
-        WorldSession *pPlayerBotWorldSession = pPlayerBot->m_session;
-        m_playerBots.erase(guid); //deletes bot player ptr inside this WorldSession PlayerBotMap
-        pPlayerBotWorldSession->LogoutPlayer(Save); //this will delete the bot Player object and PlayerbotAI object
-        delete pPlayerBotWorldSession; //finally delete the bot's WorldSession
-    }
-}
-
-//Playerbot mod: Gets a player bot Player object for this WorldSession master
-Player *WorldSession::GetPlayerBot(uint64 playerGuid) const
-{
-    PlayerBotMap::const_iterator it = m_playerBots.find(playerGuid);
-    return(it == m_playerBots.end()) ? 0 : it->second;
 }
 
 void WorldSession::LoadAccountData(PreparedQueryResult result, uint32 mask)
@@ -1083,15 +986,6 @@ void WorldSession::ProcessQueryCallbacks()
         m_charLoginCallback.get(param);
         HandlePlayerLogin((LoginQueryHolder*)param);
         m_charLoginCallback.cancel();
-    }
-
-    //! HandlePlayerBotLogin
-    if (m_charBotLoginCallback.ready())
-    {
-        SQLQueryHolder* param;
-        m_charBotLoginCallback.get(param);
-        HandlePlayerBotLogin((SQLQueryHolder*)param);
-        m_charBotLoginCallback.cancel();
     }
 
     //! HandleAddFriendOpcode
