@@ -125,7 +125,6 @@ public:
 
 };
 
-
 #define SAY_INTRO                   -1558000
 #define SAY_SUMMON                  -1558001
 
@@ -260,7 +259,7 @@ public:
 
             if (StolenSoul_Timer <= diff)
             {
-                if (Unit *pTarget = SelectUnit(SELECT_TARGET_RANDOM,0))
+                if (Unit *pTarget = SelectTarget(SELECT_TARGET_RANDOM,0))
                 {
                     if (pTarget->GetTypeId() == TYPEID_PLAYER)
                     {
@@ -287,7 +286,7 @@ public:
 
             if (Ribbon_of_Souls_timer <= diff)
             {
-                if (Unit *pTarget = SelectUnit(SELECT_TARGET_RANDOM,0))
+                if (Unit *pTarget = SelectTarget(SELECT_TARGET_RANDOM,0))
                     DoCast(pTarget, SPELL_RIBBON_OF_SOULS);
 
                 Ribbon_of_Souls_timer = 5000 + (rand()%20 * 1000);
@@ -304,7 +303,6 @@ public:
     };
 
 };
-
 
 #define SPELL_AV_MORTAL_STRIKE          16856
 #define SPELL_AV_SUNDER_ARMOR           16145
@@ -350,7 +348,6 @@ public:
     };
 
 };
-
 
 void AddSC_boss_exarch_maladaar()
 {

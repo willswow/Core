@@ -15,7 +15,6 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #include "DatabaseEnv.h"
 #include "SQLStorage.h"
 #include "ObjectMgr.h"
@@ -55,7 +54,7 @@ void SmartWaypointMgr::LoadFromDB()
 
     do
     {
-        Field *fields = result->Fetch();
+        Field* fields = result->Fetch();
         uint32 entry = fields[0].GetUInt32();
         uint32 id = fields[1].GetUInt32();
         float x,y,z;
@@ -63,8 +62,7 @@ void SmartWaypointMgr::LoadFromDB()
         y = fields[3].GetFloat();
         z = fields[4].GetFloat();
 
-
-        WayPoint *wp = new WayPoint(id, x, y, z);
+        WayPoint* wp = new WayPoint(id, x, y, z);
 
         if (last_entry != entry)
         {
@@ -316,7 +314,8 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder &e)
     }
     else
     {
-        switch (e.event.type)
+        uint32 type = e.event.type;
+        switch (type)
         {
             case SMART_EVENT_UPDATE:
             case SMART_EVENT_UPDATE_IC:
@@ -583,7 +582,6 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder &e)
             break;
 
 
-
         case SMART_ACTION_SET_EVENT_PHASE:
             if (e.action.setEventPhase.phase >= SMART_EVENT_PHASE_MAX)
             {
@@ -769,6 +767,7 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder &e)
         case SMART_ACTION_SET_UNIT_FIELD_BYTES_1:
         case SMART_ACTION_REMOVE_UNIT_FIELD_BYTES_1:
         case SMART_ACTION_INTERRUPT_SPELL:
+        case SMART_ACTION_SEND_GO_CUSTOM_ANIM:
             break;
         default:
             sLog->outErrorDb("SmartAIMgr: Not handled action_type(%u), event_type(%u), Entry %d SourceType %u Event %u, skipped.", e.GetActionType(), e.GetEventType(), e.entryOrGuid, e.GetScriptType(), e.event_id);

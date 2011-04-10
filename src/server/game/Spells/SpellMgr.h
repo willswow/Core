@@ -131,11 +131,9 @@ enum SpellFamilyFlag
     SPELLFAMILYFLAG_DK_DEATH_COIL           = 0x00002000,
     SPELLFAMILYFLAG1_DK_HUNGERING_COLD      = 0x00001000,
 
-
     // TODO: Figure out a more accurate name for the following familyflag(s)
     SPELLFAMILYFLAG_SHAMAN_TOTEM_EFFECTS    = 0x04000000,  // Seems to be linked to most totems and some totem effects
 };
-
 
 // Spell clasification
 enum SpellSpecific
@@ -537,7 +535,7 @@ inline uint32 GetDispellMask(DispelType dispel)
     if (dispel == DISPEL_ALL)
         return DISPEL_ALL_MASK;
     else
-        return (1 << dispel);
+        return uint32(1 << dispel);
 }
 
 // Diminishing Returns interaction with spells
@@ -710,13 +708,6 @@ enum SpellScriptTargetType
 };
 
 #define MAX_SPELL_TARGET_TYPE 4
-
-struct SpellTargetEntry
-{
-    SpellTargetEntry(SpellScriptTargetType type_,uint32 targetEntry_) : type(type_), targetEntry(targetEntry_) {}
-    SpellScriptTargetType type;
-    uint32 targetEntry;
-};
 
 // coordinates for spells (accessed using SpellMgr functions)
 struct SpellTargetPosition
@@ -902,7 +893,6 @@ enum SpellCustomAttributes
     SPELL_ATTR0_CU_NEGATIVE         = SPELL_ATTR0_CU_NEGATIVE_EFF0 | SPELL_ATTR0_CU_NEGATIVE_EFF1 | SPELL_ATTR0_CU_NEGATIVE_EFF2,
 };
 
-
 typedef std::vector<uint32> SpellCustomAttribute;
 typedef std::vector<bool> EnchantCustomAttribute;
 
@@ -1087,16 +1077,15 @@ class SpellMgr
             }
             if (SpellDiff->SpellID[mode] <= 0 && mode > DUNGEON_DIFFICULTY_HEROIC)
             {
-                uint8 baseMode = mode;
+                sLog->outDebug(LOG_FILTER_SPELLS_AURAS, "GetSpellForDifficultyFromSpell: spell %u mode %u spell is NULL, using mode %u", spell->Id, mode, mode-2);
                 mode -= 2;
-                sLog->outDebug(LOG_FILTER_SPELLS_AURAS, "GetSpellForDifficultyFromSpell: spell %u mode %u spell is NULL, using mode %u", spell->Id, baseMode, mode);
             }
             if (SpellDiff->SpellID[mode] <= 0)
             {
                 sLog->outErrorDb("GetSpellForDifficultyFromSpell: spell %u mode %u spell is 0. Check spelldifficulty_dbc!", spell->Id, mode);
                 return spell;
             }
-            SpellEntry const*  newSpell = sSpellStore.LookupEntry(SpellDiff->SpellID[mode]);
+            SpellEntry const* newSpell = sSpellStore.LookupEntry(uint32(SpellDiff->SpellID[mode]));
             if (!newSpell)
             {
                 sLog->outDebug(LOG_FILTER_SPELLS_AURAS, "GetSpellForDifficultyFromSpell: spell %u not found in SpellStore. Check spelldifficulty_dbc!", SpellDiff->SpellID[mode]);
@@ -1198,7 +1187,7 @@ class SpellMgr
             return spell_id;
         }
 
-        uint32 IsArenaAllowedEnchancment(uint32 ench_id) const
+        bool IsArenaAllowedEnchancment(uint32 ench_id) const
         {
             return mEnchantCustomAttr[ench_id];
         }

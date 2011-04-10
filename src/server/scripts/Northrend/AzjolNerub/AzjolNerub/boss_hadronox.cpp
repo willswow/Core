@@ -143,10 +143,10 @@ public:
 
             if (me->HasAura(SPELL_WEB_FRONT_DOORS) || me->HasAura(SPELL_WEB_SIDE_DOORS))
             {
-                if (IsCombatMovement())
+                if (IsCombatMovementAllowed())
                     SetCombatMovement(false);
             }
-            else if (!IsCombatMovement())
+            else if (!IsCombatMovementAllowed())
                 SetCombatMovement(true);
 
             if (uiPierceTimer <= diff)
@@ -173,7 +173,7 @@ public:
 
             if (uiGrabTimer <= diff)
             {
-                if (Unit* pTarget = SelectUnit(SELECT_TARGET_RANDOM, 0)) // Draws all players (and attacking Mobs) to itself.
+                if (Unit* pTarget = SelectTarget(SELECT_TARGET_RANDOM, 0)) // Draws all players (and attacking Mobs) to itself.
                     DoCast(pTarget, SPELL_WEB_GRAB);
 
                 uiGrabTimer = urand(15*IN_MILLISECONDS,30*IN_MILLISECONDS);

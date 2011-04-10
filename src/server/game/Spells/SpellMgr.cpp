@@ -1131,7 +1131,6 @@ void SpellMgr::LoadSpellTargetPositions()
     {
         Field *fields = result->Fetch();
 
-
         uint32 Spell_ID = fields[0].GetUInt32();
 
         SpellTargetPosition st;
@@ -1270,7 +1269,6 @@ void SpellMgr::LoadSpellProcEvents()
     do
     {
         Field *fields = result->Fetch();
-
 
         uint32 entry = fields[0].GetUInt32();
 
@@ -1501,19 +1499,16 @@ void SpellMgr::LoadSpellGroups()
     {
 
 
-
         sLog->outString();
         sLog->outString(">> Loaded %u spell group definitions", count);
         return;
     }
-
 
     std::set<uint32> groups;
 
     do
     {
         Field *fields = result->Fetch();
-
 
         uint32 group_id = fields[0].GetUInt32();
         if (group_id <= SPELL_GROUP_DB_RANGE_MIN && group_id >= SPELL_GROUP_CORE_RANGE_MAX)
@@ -1588,17 +1583,14 @@ void SpellMgr::LoadSpellGroupStackRules()
     if (!result)
     {
 
-
         sLog->outString(">> Loaded 0 spell group stack rules");
         sLog->outString();
         return;
     }
 
-
     do
     {
         Field *fields = result->Fetch();
-
 
         uint32 group_id = fields[0].GetUInt32();
         uint8 stack_rule = fields[1].GetUInt32();
@@ -1639,17 +1631,14 @@ void SpellMgr::LoadSpellThreats()
     {
 
 
-
         sLog->outString(">> Loaded %u aggro generating spells", count);
         sLog->outString();
         return;
     }
 
-
     do
     {
         Field *fields = result->Fetch();
-
 
         uint32 entry = fields[0].GetUInt32();
         uint16 Threat = fields[1].GetUInt16();
@@ -2106,7 +2095,6 @@ void SpellMgr::LoadSpellPetAuras()
     {
         Field *fields = result->Fetch();
 
-
         uint32 spell = fields[0].GetUInt32();
         uint8 eff = fields[1].GetUInt8();
         uint32 pet = fields[2].GetUInt32();
@@ -2157,7 +2145,6 @@ void SpellMgr::LoadPetLevelupSpellMap()
 
     uint32 count = 0;
     uint32 family_count = 0;
-
 
     for (uint32 i = 0; i < sCreatureFamilyStore.GetNumRows(); ++i)
     {
@@ -2265,7 +2252,6 @@ void SpellMgr::LoadPetDefaultSpells()
     uint32 countCreature = 0;
     uint32 countData = 0;
 
-
     for (uint32 i = 0; i < sCreatureStorage.MaxEntry; ++i)
     {
 
@@ -2298,7 +2284,6 @@ void SpellMgr::LoadPetDefaultSpells()
 
     sLog->outString("Loading summonable creature templates...");
     oldMSTime = getMSTime();
-
 
     // different summon spells
     for (uint32 i = 0; i < sSpellStore.GetNumRows(); ++i)
@@ -2338,7 +2323,6 @@ void SpellMgr::LoadPetDefaultSpells()
             }
         }
     }
-
 
     sLog->outString(">> Loaded %u summonable creature templates in %u ms", countCreature, GetMSTimeDiffToNow(oldMSTime));
     sLog->outString();
@@ -2462,7 +2446,6 @@ void SpellMgr::LoadSpellAreas()
     do
     {
         Field *fields = result->Fetch();
-
 
         uint32 spell = fields[0].GetUInt32();
         SpellArea spellArea;
@@ -3177,6 +3160,34 @@ bool SpellMgr::CanAurasStack(Aura const *aura1, Aura const *aura2, bool sameCast
         }
     }
 
+    bool isVehicleAura1 = false;
+    bool isVehicleAura2 = false;
+    uint8 i = 0;
+    while (i < MAX_SPELL_EFFECTS && !(isVehicleAura1 && isVehicleAura2))
+    {
+        if (spellInfo_1->EffectApplyAuraName[i] == SPELL_AURA_CONTROL_VEHICLE)
+            isVehicleAura1 = true;
+        if (spellInfo_2->EffectApplyAuraName[i] == SPELL_AURA_CONTROL_VEHICLE)
+            isVehicleAura2 = true;
+
+        ++i;
+    }
+
+    if (isVehicleAura1 && isVehicleAura2)
+    {
+        Vehicle* veh = NULL;
+        if (aura1->GetOwner()->ToUnit())
+            veh = aura1->GetOwner()->ToUnit()->GetVehicleKit();
+
+        if (!veh)           // We should probably just let it stack. Vehicle system will prevent undefined behaviour later
+            return true;
+
+        if (!veh->GetAvailableSeatCount())
+            return false;   // No empty seat available
+
+        return true;        // Empty seat available (skip rest)
+    }
+
     uint32 spellId_1 = GetLastSpellInChain(spellInfo_1->Id);
     uint32 spellId_2 = GetLastSpellInChain(spellInfo_2->Id);
 
@@ -3245,7 +3256,6 @@ void SpellMgr::LoadSpellEnchantProcData()
     if (!result)
     {
 
-
         sLog->outString(">> Loaded %u spell enchant proc event conditions", count);
         sLog->outString();
         return;
@@ -3254,7 +3264,6 @@ void SpellMgr::LoadSpellEnchantProcData()
     do
     {
         Field *fields = result->Fetch();
-
 
         uint32 enchantId = fields[0].GetUInt32();
 
@@ -3354,7 +3363,6 @@ void SpellMgr::LoadSpellRanks()
         sLog->outErrorDb("`spell_ranks` table is empty!");
         return;
     }
-
 
     uint32 rows = 0;
     bool finished = false;
@@ -3588,6 +3596,10 @@ void SpellMgr::LoadSpellCustomAttr()
 
         switch (i)
         {
+        case 36350: //They Must Burn Bomb Aura (self)
+            spellInfo->EffectTriggerSpell[0] = 36325; // They Must Burn Bomb Drop (DND)
+            count++;
+            break;
         case 49838: // Stop Time
             spellInfo->AttributesEx3 |= SPELL_ATTR3_NO_INITIAL_AGGRO;
             count++;
@@ -3946,6 +3958,13 @@ void SpellMgr::LoadSpellCustomAttr()
             spellInfo->EffectImplicitTargetB[0] = TARGET_UNIT_MASTER;
             count++;
             break;
+        case 54800: // Sigil of the Frozen Conscience - change class mask to custom extended flags of Icy Touch
+                    // this is done because another spell also uses the same SpellFamilyFlags as Icy Touch
+                    // SpellFamilyFlags[0] & 0x00000040 in SPELLFAMILY_DEATHKNIGHT is currently unused (3.3.5a)
+                    // this needs research on modifier applying rules, does not seem to be in Attributes fields
+            spellInfo->EffectSpellClassMask[0] = flag96(0x00000040, 0x00000000, 0x00000000);
+            count++;
+            break;
         // ULDUAR SPELLS
         //
         case 63342: // Focused Eyebeam Summon Trigger
@@ -4014,19 +4033,6 @@ void SpellMgr::LoadSpellCustomAttr()
             spellInfo->Effect[1] = 0;
             count++;
             break;
-        case 70447: // Volatile Ooze Adhesive (Professor Putricide)
-        case 72836: // Volatile Ooze Adhesive (Professor Putricide)
-        case 72837: // Volatile Ooze Adhesive (Professor Putricide)
-        case 72838: // Volatile Ooze Adhesive (Professor Putricide)
-        case 70672: // Gaseous Bloat (Professor Putricide)
-        case 72455: // Gaseous Bloat (Professor Putricide)
-        case 72832: // Gaseous Bloat (Professor Putricide)
-        case 72833: // Gaseous Bloat (Professor Putricide)
-            spellInfo->EffectImplicitTargetB[0] = TARGET_UNIT_TARGET_ENEMY;
-            spellInfo->EffectImplicitTargetB[1] = TARGET_UNIT_TARGET_ENEMY;
-            spellInfo->EffectImplicitTargetB[2] = TARGET_UNIT_TARGET_ENEMY;
-            count++;
-            break;
         case 70911: // Unbound Plague (Professor Putricide)
         case 72854: // Unbound Plague (Professor Putricide)
         case 72855: // Unbound Plague (Professor Putricide)
@@ -4070,6 +4076,10 @@ void SpellMgr::LoadSpellCustomAttr()
             spellInfo->Effect[1] = 0;
             count++;
             break;
+        case 51590: // Toss Ice Boulder
+            spellInfo->MaxAffectedTargets = 1;
+            count++;
+            break;
         default:
             break;
         }
@@ -4106,6 +4116,12 @@ void SpellMgr::LoadSpellCustomAttr()
                     break;
                 count++;
                 break;
+            case SPELLFAMILY_DEATHKNIGHT:
+                // Icy Touch - extend FamilyFlags (unused value) for Sigil of the Frozen Conscience to use
+                if (spellInfo->SpellIconID == 2721 && spellInfo->SpellFamilyFlags[0] & 0x2)
+                    spellInfo->SpellFamilyFlags[0] |= 0x40;
+                count++;
+                break;
         }
     }
 
@@ -4127,7 +4143,6 @@ void SpellMgr::LoadEnchantCustomAttr()
 
     uint32 size = sSpellItemEnchantmentStore.GetNumRows();
     mEnchantCustomAttr.resize(size);
-
 
     uint32 count = 0;
 
@@ -4184,7 +4199,6 @@ void SpellMgr::LoadSpellLinked()
     do
     {
         Field *fields = result->Fetch();
-
 
         int32 trigger = fields[0].GetInt32();
         int32 effect =  fields[1].GetInt32();

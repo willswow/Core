@@ -17,7 +17,6 @@
  */
 
 
-
 #include "Player.h"
 #include "SpellAuras.h"
 #include "SpellMgr.h"
@@ -159,7 +158,10 @@ bool Condition::Meets(Player * player, Unit* invoker)
             break;
         }
         case CONDITION_SPELL:
-            condMeets = player->HasSpell(mConditionValue1);
+            if (mConditionValue2 == 1)
+                condMeets = player->HasSpell(mConditionValue1);
+            else
+                condMeets = !player->HasSpell(mConditionValue1);
             break;
         case CONDITION_NOITEM:
             condMeets = !player->HasItemCount(mConditionValue1, 1, mConditionValue2 ? true : false);
@@ -374,7 +376,6 @@ void ConditionMgr::LoadConditions(bool isReload)
         sLog->outString("Re-Loading `gossip_menu_option` Table for Conditions!");
         sObjectMgr->LoadGossipMenuItems();
     }
-
 
     QueryResult result = WorldDatabase.Query("SELECT SourceTypeOrReferenceId, SourceGroup, SourceEntry, ElseGroup, ConditionTypeOrReference,"
                                              " ConditionValue1, ConditionValue2, ConditionValue3, ErrorTextId, ScriptName FROM conditions");
@@ -1407,7 +1408,6 @@ void ConditionMgr::Clean()
     }
 
     m_ConditionMap.clear();
-
 
     for (VehicleSpellConditionMap::iterator itr = m_VehicleSpellConditions.begin(); itr != m_VehicleSpellConditions.end(); ++itr)
     {

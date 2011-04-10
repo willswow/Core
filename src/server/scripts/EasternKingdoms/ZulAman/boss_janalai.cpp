@@ -426,7 +426,7 @@ class boss_janalai : public CreatureScript
 
                 if (FireBreathTimer <= diff)
                 {
-                    if (Unit *pTarget = SelectUnit(SELECT_TARGET_RANDOM,0))
+                    if (Unit *pTarget = SelectTarget(SELECT_TARGET_RANDOM,0))
                     {
                         me->AttackStop();
                         me->GetMotionMaster()->Clear();
@@ -438,7 +438,6 @@ class boss_janalai : public CreatureScript
                 } else FireBreathTimer -= diff;
             }
         };
-
 
         CreatureAI* GetAI(Creature* creature) const
         {

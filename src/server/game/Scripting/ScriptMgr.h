@@ -261,7 +261,7 @@ class WorldScript : public ScriptObject, public UpdatableScript<void>
         virtual void OnShutdownCancel() { }
 
         // Called on every world tick (don't execute too heavy code here).
-        virtual void OnUpdate(void* /*null*/, uint32 /*diff*/) { }
+        virtual void OnUpdate(uint32 /*diff*/) { }
 
         // Called when the world is started.
         virtual void OnStartup() { }
@@ -464,7 +464,9 @@ class GameObjectScript : public ScriptObject, public UpdatableScript<GameObject>
         virtual uint32 GetDialogStatus(Player* /*player*/, GameObject* /*go*/) { return 100; }
 
         // Called when the gameobject is destroyed (destructible buildings only).
-        virtual void OnDestroyed(Player* /*player*/, GameObject* /*go*/, uint32 /*eventId*/) { }
+        virtual void OnDestroyed(GameObject* /*go*/, Player* /*player*/, uint32 /*eventId*/) { }
+        // Called when the gameobject is damaged (destructible buildings only).
+        virtual void OnDamaged(GameObject* /*go*/, Player* /*player*/,  uint32 /*eventId*/) { }
 };
 
 class AreaTriggerScript : public ScriptObject
@@ -583,9 +585,6 @@ class VehicleScript : public ScriptObject
 
         // Called after a vehicle is uninstalled.
         virtual void OnUninstall(Vehicle* /*veh*/) { }
-
-        // Called after a vehicle dies.
-        virtual void OnDie(Vehicle* /*veh*/) { }
 
         // Called when a vehicle resets.
         virtual void OnReset(Vehicle* /*veh*/) { }
@@ -763,7 +762,7 @@ class ScriptMgr
     friend class ScriptObject;
 
     ScriptMgr();
-    ~ScriptMgr();
+    virtual ~ScriptMgr();
 
     uint32 _scriptCount;
 
@@ -777,6 +776,9 @@ class ScriptMgr
 
         void IncrementScriptCount() { ++_scriptCount; }
         uint32 GetScriptCount() const { return _scriptCount; }
+
+    public: /* Unloading */
+        void Unload();
 
     public: /* SpellScriptLoader */
 
@@ -859,7 +861,8 @@ class ScriptMgr
         bool OnQuestAccept(Player* player, GameObject* go, Quest const* quest);
         bool OnQuestReward(Player* player, GameObject* go, Quest const* quest, uint32 opt);
         uint32 GetDialogStatus(Player* player, GameObject* go);
-        void OnGameObjectDestroyed(Player* player, GameObject* go, uint32 eventId);
+        void OnGameObjectDestroyed(GameObject* go, Player* player, uint32 eventId);
+        void OnGameObjectDamaged(GameObject* go, Player* player, uint32 eventId);
         void OnGameObjectUpdate(GameObject* go, uint32 diff);
 
     public: /* AreaTriggerScript */
@@ -898,7 +901,6 @@ class ScriptMgr
 
         void OnInstall(Vehicle* veh);
         void OnUninstall(Vehicle* veh);
-        void OnDie(Vehicle* veh);
         void OnReset(Vehicle* veh);
         void OnInstallAccessory(Vehicle* veh, Creature* accessory);
         void OnAddPassenger(Vehicle* veh, Unit* passenger, int8 seatId);

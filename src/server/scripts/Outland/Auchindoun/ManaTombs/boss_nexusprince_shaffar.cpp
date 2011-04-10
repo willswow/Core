@@ -128,7 +128,7 @@ public:
             {
                 summoned->CastSpell(summoned,SPELL_ETHEREAL_BEACON_VISUAL,false);
 
-                if (Unit *pTarget = SelectUnit(SELECT_TARGET_RANDOM,0))
+                if (Unit *pTarget = SelectTarget(SELECT_TARGET_RANDOM,0))
                     summoned->AI()->AttackStart(pTarget);
             }
 
@@ -214,7 +214,6 @@ public:
     };
 
 };
-
 
 enum eEnums
 {
@@ -308,7 +307,6 @@ public:
 
 };
 
-
 enum eEthereal
 {
     SPELL_ETHEREAL_APPRENTICE_FIREBOLT          = 32369,
@@ -360,7 +358,6 @@ public:
     };
 
 };
-
 
 void AddSC_boss_nexusprince_shaffar()
 {

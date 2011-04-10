@@ -167,7 +167,7 @@ public:
                         break;
                     case EVENT_SPINE:
                     {
-                        Unit *pTarget = SelectUnit(SELECT_TARGET_RANDOM, 1);
+                        Unit *pTarget = SelectTarget(SELECT_TARGET_RANDOM, 1);
                         if (!pTarget) pTarget = me->getVictim();
                         if (pTarget)
                         {
@@ -225,7 +225,6 @@ public:
     }
 
 };
-
 
 void AddSC_boss_najentus()
 {

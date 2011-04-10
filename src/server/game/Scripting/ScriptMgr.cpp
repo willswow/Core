@@ -142,6 +142,25 @@ ScriptMgr::ScriptMgr()
 
 ScriptMgr::~ScriptMgr()
 {
+}
+
+void ScriptMgr::Initialize()
+{
+    uint32 oldMSTime = getMSTime();
+
+    LoadDatabase();
+
+    sLog->outString("Loading C++ scripts");
+
+    FillSpellSummary();
+    AddScripts();
+
+    sLog->outString(">> Loaded %u C++ scripts in %u ms", GetScriptCount(), GetMSTimeDiffToNow(oldMSTime));
+    sLog->outString();
+}
+
+void ScriptMgr::Unload()
+{
     #define SCR_CLEAR(T) \
         FOR_SCRIPTS(T, itr, end) \
             delete itr->second; \
@@ -421,7 +440,7 @@ void ScriptMgr::OnShutdownCancel()
 
 void ScriptMgr::OnWorldUpdate(uint32 diff)
 {
-    FOREACH_SCRIPT(WorldScript)->OnUpdate(NULL, diff);
+    FOREACH_SCRIPT(WorldScript)->OnUpdate(diff);
 }
 
 void ScriptMgr::OnHonorCalculation(float& honor, uint8 level, float multiplier)
@@ -822,12 +841,20 @@ uint32 ScriptMgr::GetDialogStatus(Player* player, GameObject* go)
     return tmpscript->GetDialogStatus(player, go);
 }
 
-void ScriptMgr::OnGameObjectDestroyed(Player* player, GameObject* go, uint32 eventId)
+void ScriptMgr::OnGameObjectDestroyed(GameObject* go, Player* player, uint32 eventId)
 {
     ASSERT(go);
 
     GET_SCRIPT(GameObjectScript, go->GetScriptId(), tmpscript);
-    tmpscript->OnDestroyed(player, go, eventId);
+    tmpscript->OnDestroyed(go, player, eventId);
+}
+
+void ScriptMgr::OnGameObjectDamaged(GameObject* go, Player* player, uint32 eventId)
+{
+    ASSERT(go);
+
+    GET_SCRIPT(GameObjectScript, go->GetScriptId(), tmpscript);
+    tmpscript->OnDamaged(go, player, eventId);
 }
 
 void ScriptMgr::OnGameObjectUpdate(GameObject* go, uint32 diff)
@@ -852,7 +879,7 @@ bool ScriptMgr::OnAreaTrigger(Player* player, AreaTriggerEntry const* trigger)
     ASSERT(player);
     ASSERT(trigger);
 
-    GET_SCRIPT_RET(AreaTriggerScript, GetAreaTriggerScriptId(trigger->id), tmpscript, false);
+    GET_SCRIPT_RET(AreaTriggerScript, sObjectMgr->GetAreaTriggerScriptId(trigger->id), tmpscript, false);
     return tmpscript->OnTrigger(player, trigger);
 }
 
@@ -955,15 +982,6 @@ void ScriptMgr::OnUninstall(Vehicle* veh)
 
     GET_SCRIPT(VehicleScript, veh->GetBase()->ToCreature()->GetScriptId(), tmpscript);
     tmpscript->OnUninstall(veh);
-}
-
-void ScriptMgr::OnDie(Vehicle* veh)
-{
-    ASSERT(veh);
-    ASSERT(veh->GetBase()->GetTypeId() == TYPEID_UNIT);
-
-    GET_SCRIPT(VehicleScript, veh->GetBase()->ToCreature()->GetScriptId(), tmpscript);
-    tmpscript->OnDie(veh);
 }
 
 void ScriptMgr::OnReset(Vehicle* veh)

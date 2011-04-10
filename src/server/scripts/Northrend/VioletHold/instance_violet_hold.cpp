@@ -115,7 +115,7 @@ public:
 
     struct instance_violet_hold_InstanceMapScript : public InstanceScript
     {
-        instance_violet_hold_InstanceMapScript(Map* pMap) : InstanceScript(pMap) {Initialize();};
+        instance_violet_hold_InstanceMapScript(Map* pMap) : InstanceScript(pMap) {}
 
         uint64 uiMoragg;
         uint64 uiErekem;
@@ -798,18 +798,20 @@ public:
 
         void ProcessEvent(GameObject* /*pGO*/, uint32 uiEventId)
         {
-            switch(uiEventId)
+            switch (uiEventId)
             {
                 case EVENT_ACTIVATE_CRYSTAL:
                     bCrystalActivated = true; // Activation by player's will throw event signal
                     ActivateCrystal();
                     break;
             }
-    }
+        }
 
+        void ProcessEvent(Unit* /*unit*/, uint32 /*eventId*/)
+        {
+        }
+    };
 };
-};
-
 
 void AddSC_instance_violet_hold()
 {

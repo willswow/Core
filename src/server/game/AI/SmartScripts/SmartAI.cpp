@@ -15,7 +15,6 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #include "DatabaseEnv.h"
 #include "SQLStorage.h"
 #include "ObjectMgr.h"
@@ -33,7 +32,7 @@
 #include "SmartAI.h"
 #include "ScriptPCH.h"
 
-SmartAI::SmartAI(Creature *c) : CreatureAI(c)
+SmartAI::SmartAI(Creature* c) : CreatureAI(c)
 {
     // copy script to local (protection for table reload)
 
@@ -211,7 +210,6 @@ void SmartAI::EndPath(bool fail)
     else
         GetScript()->SetPathId(0);
 
-
     ObjectList* targets = GetScript()->GetTargetList(SMART_ESCORT_TARGETS);
     if (targets && mEscortQuestID)
     {
@@ -224,11 +222,11 @@ void SmartAI::EndPath(bool fail)
             if(fail && plr->GetQuestStatus(mEscortQuestID) == QUEST_STATUS_INCOMPLETE)
                 plr->FailQuest(mEscortQuestID);
 
-            if (Group *pGroup = plr->GetGroup())
+            if (Group* pGroup = plr->GetGroup())
             {
-                for (GroupReference *gr = pGroup->GetFirstMember(); gr != NULL; gr = gr->next())
+                for (GroupReference* gr = pGroup->GetFirstMember(); gr != NULL; gr = gr->next())
                 {
-                    Player *pGroupGuy = gr->getSource();
+                    Player* pGroupGuy = gr->getSource();
 
                     if(!fail && pGroupGuy->IsAtGroupRewardDistance(me) && !pGroupGuy->GetCorpse())
                         pGroupGuy->AreaExploredOrEventHappens(mEscortQuestID);
@@ -392,11 +390,11 @@ bool SmartAI::IsEscortInvokerInRange()
             if (me->GetDistance(plr) <= SMART_ESCORT_MAX_PLAYER_DIST)
                         return true;
 
-            if (Group *pGroup = plr->GetGroup())
+            if (Group* pGroup = plr->GetGroup())
             {
-                for (GroupReference *gr = pGroup->GetFirstMember(); gr != NULL; gr = gr->next())
+                for (GroupReference* gr = pGroup->GetFirstMember(); gr != NULL; gr = gr->next())
                 {
-                    Player *pGroupGuy = gr->getSource();
+                    Player* pGroupGuy = gr->getSource();
 
                     if (me->GetDistance(pGroupGuy) <= SMART_ESCORT_MAX_PLAYER_DIST)
                         return true;

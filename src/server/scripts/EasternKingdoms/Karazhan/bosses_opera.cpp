@@ -194,7 +194,7 @@ public:
 
             if (WaterBoltTimer <= diff)
             {
-                DoCast(SelectUnit(SELECT_TARGET_RANDOM, 0), SPELL_WATERBOLT);
+                DoCast(SelectTarget(SELECT_TARGET_RANDOM, 0), SPELL_WATERBOLT);
                 WaterBoltTimer = TitoDied ? 1500 : 5000;
             } else WaterBoltTimer -= diff;
 
@@ -744,13 +744,6 @@ public:
 
 };
 
-
-
-
-
-
-
-
 /**************************************/
 /**** Opera Red Riding Hood Event ****/
 /************************************/
@@ -799,7 +792,6 @@ public:
     }
 
 };
-
 
 class boss_bigbadwolf : public CreatureScript
 {
@@ -926,7 +918,6 @@ public:
     };
 
 };
-
 
 /**********************************************/
 /******** Opera Romeo and Juliet Event *******/
@@ -1432,7 +1423,7 @@ void boss_julianne::boss_julianneAI::UpdateAI(const uint32 diff)
 
     if (PowerfulAttractionTimer <= diff)
     {
-        DoCast(SelectUnit(SELECT_TARGET_RANDOM, 0), SPELL_POWERFUL_ATTRACTION);
+        DoCast(SelectTarget(SELECT_TARGET_RANDOM, 0), SPELL_POWERFUL_ATTRACTION);
         PowerfulAttractionTimer = urand(5000,30000);
     } else PowerfulAttractionTimer -= diff;
 
@@ -1512,7 +1503,6 @@ void boss_julianne::boss_julianneAI::DamageTaken(Unit* /*done_by*/, uint32 &dama
     }
     sLog->outError("TSCR: boss_julianneAI: DamageTaken reach end of code, that should not happen.");
 }
-
 
 void AddSC_bosses_opera()
 {

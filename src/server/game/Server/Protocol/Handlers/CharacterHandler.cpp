@@ -178,10 +178,6 @@ bool LoginQueryHolder::Initialize()
     stmt->setUInt32(0, lowGuid);
     res &= SetPreparedQuery(PLAYER_LOGIN_QUERY_LOADRANDOMBG, stmt);
 
-    stmt = CharacterDatabase.GetPreparedStatement(CHAR_LOAD_PLAYER_ARENASTATS);
-    stmt->setUInt32(0, lowGuid);
-    res &= SetPreparedQuery(PLAYER_LOGIN_QUERY_LOADARENASTATS, stmt);
-
     stmt = CharacterDatabase.GetPreparedStatement(CHAR_LOAD_PLAYER_BANNED);
     stmt->setUInt32(0, lowGuid);
     res &= SetPreparedQuery(PLAYER_LOGIN_QUERY_LOADBANNED, stmt);
@@ -205,6 +201,7 @@ void WorldSession::HandleCharEnum(QueryResult result)
 
     data << num;
 
+    _allowedCharsToLogin.clear();
     if (result)
     {
         do
@@ -212,7 +209,10 @@ void WorldSession::HandleCharEnum(QueryResult result)
             uint32 guidlow = (*result)[0].GetUInt32();
             sLog->outDetail("Loading char guid %u from account %u.",guidlow,GetAccountId());
             if (Player::BuildEnumData(result, &data))
+            {
+                _allowedCharsToLogin.insert(guidlow);
                 ++num;
+            }
         }
         while (result->NextRow());
     }
@@ -549,7 +549,7 @@ void WorldSession::HandleCharCreateOpcode(WorldPacket & recv_data)
     Player * pNewChar = new Player(this);
     if (!pNewChar->Create(sObjectMgr->GenerateLowGuid(HIGHGUID_PLAYER), name, race_, class_, gender, skin, face, hairStyle, hairColor, facialHair, outfitId))
     {
-        // Player not create (race/class problem?)
+        // Player not create (race/class/etc problem?)
         pNewChar->CleanupsBeforeDelete();
         delete pNewChar;
 
@@ -659,6 +659,13 @@ void WorldSession::HandlePlayerLoginOpcode(WorldPacket & recv_data)
     sLog->outStaticDebug("WORLD: Recvd Player Logon Message");
 
     recv_data >> playerGuid;
+
+    if (!CharCanLogin(GUID_LOPART(playerGuid)))
+    {
+        sLog->outError("Account (%u) can't login with that character (%u).", GetAccountId(), GUID_LOPART(playerGuid));
+        KickPlayer();
+        return;
+    }
 
     LoginQueryHolder *holder = new LoginQueryHolder(GetAccountId(), playerGuid);
     if (!holder->Initialize())
@@ -1699,17 +1706,31 @@ void WorldSession::HandleCharFactionOrRaceChange(WorldPacket& recv_data)
         Player::LeaveAllArenaTeams(guid);
 
         // Reset homebind and position
-        trans->PAppend("DELETE FROM `character_homebind` WHERE guid = '%u'", lowGuid);
+        PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_PLAYER_HOMEBIND);
+        stmt->setUInt32(0, lowGuid);
+        trans->Append(stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_ADD_PLAYER_HOMEBIND);
+        stmt->setUInt32(0, lowGuid);
         if (team == BG_TEAM_ALLIANCE)
         {
-            trans->PAppend("INSERT INTO `character_homebind` VALUES (%u,0,1519,-8867.68,673.373,97.9034)", lowGuid);
+            stmt->setUInt16(1, 0);
+            stmt->setUInt16(2, 1519);
+            stmt->setFloat (3, -8867.68f);
+            stmt->setFloat (4, 673.373f);
+            stmt->setFloat (5, 97.9034f);
             Player::SavePositionInDB(0, -8867.68f, 673.373f, 97.9034f, 0.0f, 1519, lowGuid);
         }
         else
         {
-            trans->PAppend("INSERT INTO `character_homebind` VALUES (%u,1,1637,1633.33,-4439.11,15.7588)", lowGuid);
+            stmt->setUInt16(1, 1);
+            stmt->setUInt16(2, 1637);
+            stmt->setFloat (3, 1633.33f);
+            stmt->setFloat (4, -4439.11f);
+            stmt->setFloat (5, 15.7588f);
             Player::SavePositionInDB(1, 1633.33f, -4439.11f, 15.7588f, 0.0f, 1637, lowGuid);
         }
+        trans->Append(stmt);
 
         // Achievement conversion
         for (std::map<uint32, uint32>::const_iterator it = sObjectMgr->factionchange_achievements.begin(); it != sObjectMgr->factionchange_achievements.end(); ++it)

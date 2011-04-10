@@ -42,7 +42,7 @@
 struct AchievementEntry
 {
     uint32    ID;                                           // 0
-    int32    factionFlag;                                   // 1 -1=all, 0=horde, 1=alliance
+    int32    requiredFaction;                               // 1 -1=all, 0=horde, 1=alliance
     int32    mapID;                                         // 2 -1=none
     //uint32 parentAchievement;                             // 3 its Achievement parent (can`t start while parent uncomplete, use its Criteria if don`t have own, use its progress on begin)
     char *name[16];                                         // 4-19
@@ -497,11 +497,11 @@ struct AchievementCriteriaEntry
     {
         uint32  additionalRequirement_type;
         uint32  additionalRequirement_value;
-    } additionalRequrements[MAX_CRITERIA_REQUIREMENTS];
+    } additionalRequirements[MAX_CRITERIA_REQUIREMENTS];
 
     //char*  name[16];                                      // 9-24
     //uint32 name_flags;                                    // 25
-    uint32  completionFlag;                                 // 26
+    uint32  flags;                                          // 26
     uint32  timedType;                                      // 27
     uint32  timerStartEvent;                                // 28 Alway appears with timed events
                                                             // for timed spells it is spell id for
@@ -782,6 +782,29 @@ struct CurrencyTypesEntry
     uint32    ItemId;                                       // 1        used as real index
     //uint32    Category;                                   // 2        may be category
     uint32    BitIndex;                                     // 3        bit index in PLAYER_FIELD_KNOWN_CURRENCIES (1 << (index-1))
+};
+
+struct DestructibleModelDataEntry
+{
+    uint32  Id;
+    //uint32  DamagedUnk1;
+    //uint32  DamagedUnk2;
+    uint32  DamagedDisplayId;
+    //uint32  DamagedUnk3;
+    //uint32  DestroyedUnk1;
+    //uint32  DestroyedUnk2;
+    uint32  DestroyedDisplayId;
+    //uint32  DestroyedUnk3;
+    //uint32  RebuildingUnk1;
+    //uint32  RebuildingUnk2;
+    uint32  RebuildingDisplayId;
+    //uint32  RebuildingUnk3;
+    //uint32  SmokeUnk1;
+    //uint32  SmokeUnk2;
+    uint32  SmokeDisplayId;
+    //uint32  SmokeUnk3;
+    //uint32  Unk4;
+    //uint32  Unk5;
 };
 
 struct DungeonEncounterEntry
@@ -1234,7 +1257,6 @@ struct MapDifficultyEntry
     //char*       difficultyString;                         // 22
 };
 
-
 struct MovieEntry
 {
     uint32      Id;                                         // 0 index
@@ -1680,7 +1702,6 @@ struct StableSlotPricesEntry
     uint32 Price;
 };
 
-
 struct SummonPropertiesEntry
 {
     uint32  Id;                                             // 0
@@ -1690,7 +1711,6 @@ struct SummonPropertiesEntry
     uint32  Slot;                                           // 4, 0-6
     uint32  Flags;                                          // 5
 };
-
 
 #define MAX_TALENT_RANK 5
 #define MAX_PET_TALENT_RANK 3                               // use in calculations, expected <= MAX_TALENT_RANK

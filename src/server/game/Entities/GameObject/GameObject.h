@@ -130,7 +130,7 @@ struct GameObjectInfo
             uint32 level;                                   //1
             uint32 radius;                                  //2 radius for trap activation
             uint32 spellId;                                 //3
-            uint32 charges;                                 //4 need respawn (if > 0)
+            uint32 type;                                    //4 0 trap with no despawn after cast. 1 trap despawns after cast. 2 bomb casts on spawn.
             uint32 cooldown;                                //5 time in secs
             int32 autoCloseTime;                            //6
             uint32 startDelay;                              //7
@@ -495,6 +495,7 @@ struct GameObjectInfo
             default: return 0;
         }
     }
+
     uint32 GetGossipMenuId() const
     {
         switch(type)
@@ -504,6 +505,7 @@ struct GameObjectInfo
             default: return 0;
         }
     }
+
     uint32 GetEventScriptId() const
     {
         switch(type)
@@ -511,6 +513,16 @@ struct GameObjectInfo
             case GAMEOBJECT_TYPE_GOOBER:        return goober.eventId;
             case GAMEOBJECT_TYPE_CHEST:         return chest.eventId;
             case GAMEOBJECT_TYPE_CAMERA:        return camera.eventID;
+            default: return 0;
+        }
+    }
+
+    uint32 GetCooldown() const                              // Cooldown preventing goober and traps to cast spell
+    {
+        switch (type)
+        {
+            case GAMEOBJECT_TYPE_TRAP:        return trap.cooldown;
+            case GAMEOBJECT_TYPE_GOOBER:      return goober.cooldown;
             default: return 0;
         }
     }
@@ -748,7 +760,7 @@ class GameObject : public WorldObject, public GridObject<GameObject>
         GameObject* LookupFishingHoleAround(float range);
 
         void CastSpell(Unit *target, uint32 spell);
-        void SendCustomAnim();
+        void SendCustomAnim(uint32 anim);
         bool IsInRange(float x, float y, float z, float radius) const;
         void TakenDamage(uint32 damage, Unit* who = NULL);
         void Rebuild();

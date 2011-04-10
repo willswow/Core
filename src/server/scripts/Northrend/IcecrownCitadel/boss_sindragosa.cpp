@@ -18,7 +18,6 @@
 #include "ObjectMgr.h"
 #include "ScriptMgr.h"
 #include "ScriptedCreature.h"
-#include "SpellScript.h"
 #include "SpellAuraEffects.h"
 #include "icecrown_citadel.h"
 
@@ -142,14 +141,14 @@ enum Shadowmourne
     SPELL_FROST_IMBUED_BLADE    = 72290,
 };
 
-static Position const RimefangFlyPos      = {4413.309f, 2456.421f, 223.3795f, 2.890186f};
-static Position const RimefangLandPos     = {4413.309f, 2456.421f, 203.3848f, 2.890186f};
-static Position const SpinestalkerFlyPos  = {4418.895f, 2514.233f, 220.4864f, 3.396045f};
-static Position const SpinestalkerLandPos = {4418.895f, 2514.233f, 203.3848f, 3.396045f};
-       Position const SindragosaSpawnPos  = {4818.700f, 2483.710f, 287.0650f, 3.089233f};
-static Position const SindragosaFlyPos    = {4475.190f, 2484.570f, 234.8510f, 3.141593f};
-static Position const SindragosaLandPos   = {4419.190f, 2484.570f, 203.3848f, 3.141593f};
-static Position const SindragosaAirPos    = {4475.990f, 2484.430f, 247.9340f, 3.141593f};
+Position const RimefangFlyPos      = {4413.309f, 2456.421f, 223.3795f, 2.890186f};
+Position const RimefangLandPos     = {4413.309f, 2456.421f, 203.3848f, 2.890186f};
+Position const SpinestalkerFlyPos  = {4418.895f, 2514.233f, 220.4864f, 3.396045f};
+Position const SpinestalkerLandPos = {4418.895f, 2514.233f, 203.3848f, 3.396045f};
+Position const SindragosaSpawnPos  = {4818.700f, 2483.710f, 287.0650f, 3.089233f};
+Position const SindragosaFlyPos    = {4475.190f, 2484.570f, 234.8510f, 3.141593f};
+Position const SindragosaLandPos   = {4419.190f, 2484.570f, 203.3848f, 3.141593f};
+Position const SindragosaAirPos    = {4475.990f, 2484.430f, 247.9340f, 3.141593f};
 
 class FrostwyrmLandEvent : public BasicEvent
 {
@@ -175,14 +174,6 @@ class boss_sindragosa : public CreatureScript
         {
             boss_sindragosaAI(Creature* creature) : BossAI(creature, DATA_SINDRAGOSA)
             {
-            }
-
-            void InitializeAI()
-            {
-                if (!instance || static_cast<InstanceMap*>(me->GetMap())->GetScriptId() != GetScriptId(ICCScriptName))
-                    me->IsAIEnabled = false;
-                else if (!me->isDead())
-                    Reset();
             }
 
             void Reset()
@@ -480,7 +471,7 @@ class boss_sindragosa : public CreatureScript
 
         CreatureAI* GetAI(Creature* creature) const
         {
-            return new boss_sindragosaAI(creature);
+            return GetIcecrownCitadelAI<boss_sindragosaAI>(creature);
         }
 };
 
@@ -570,14 +561,6 @@ class npc_spinestalker : public CreatureScript
         {
             npc_spinestalkerAI(Creature* creature) : ScriptedAI(creature), instance(creature->GetInstanceScript())
             {
-            }
-
-            void InitializeAI()
-            {
-                if (!instance || static_cast<InstanceMap*>(me->GetMap())->GetScriptId() != GetScriptId(ICCScriptName))
-                    me->IsAIEnabled = false;
-                else if (!me->isDead())
-                    Reset();
             }
 
             void Reset()
@@ -677,7 +660,7 @@ class npc_spinestalker : public CreatureScript
 
         CreatureAI* GetAI(Creature* creature) const
         {
-            return new npc_spinestalkerAI(creature);
+            return GetIcecrownCitadelAI<npc_spinestalkerAI>(creature);
         }
 };
 
@@ -690,14 +673,6 @@ class npc_rimefang : public CreatureScript
         {
             npc_rimefangAI(Creature* creature) : ScriptedAI(creature), instance(creature->GetInstanceScript())
             {
-            }
-
-            void InitializeAI()
-            {
-                if (!instance || static_cast<InstanceMap*>(me->GetMap())->GetScriptId() != GetScriptId(ICCScriptName))
-                    me->IsAIEnabled = false;
-                else if (!me->isDead())
-                    Reset();
             }
 
             void Reset()
@@ -781,7 +756,7 @@ class npc_rimefang : public CreatureScript
                             break;
                         case EVENT_ICY_BLAST:
                         {
-                            icyBlastCounter = RAID_MODE<uint32>(5, 7, 6, 8);
+                            icyBlastCounter = RAID_MODE<uint8>(5, 7, 6, 8);
                             me->SetReactState(REACT_PASSIVE);
                             me->AttackStop();
                             me->SetFlying(true);
@@ -824,7 +799,7 @@ class npc_rimefang : public CreatureScript
 
         CreatureAI* GetAI(Creature* creature) const
         {
-            return new npc_rimefangAI(creature);
+            return GetIcecrownCitadelAI<npc_rimefangAI>(creature);
         }
 };
 
@@ -922,8 +897,8 @@ class npc_sindragosa_trash : public CreatureScript
             }
 
         private:
-            InstanceScript* instance;
             EventMap events;
+            InstanceScript* instance;
             uint32 frostwyrmId;
             bool isTaunted; // Frostwing Whelp only
         };
@@ -1011,7 +986,7 @@ class spell_sindragosa_unchained_magic : public SpellScriptLoader
             void FilterTargets(std::list<Unit*>& unitList)
             {
                 unitList.remove_if(UnchainedMagicTargetSelector());
-                uint32 maxSize = GetCaster()->GetMap()->GetSpawnMode() & 1 ? 5 : 2;
+                uint32 maxSize = uint32(GetCaster()->GetMap()->GetSpawnMode() & 1 ? 5 : 2);
                 if (unitList.size() > maxSize)
                     Trinity::RandomResizeList(unitList, maxSize);
             }
@@ -1391,7 +1366,7 @@ class spell_frostwarden_handler_focus_fire : public SpellScriptLoader
         {
             PrepareAuraScript(spell_frostwarden_handler_focus_fire_AuraScript);
 
-            void PeriodicTick(AuraEffect const* aurEff)
+            void PeriodicTick(AuraEffect const* /*aurEff*/)
             {
                 PreventDefaultAction();
                 if (Unit* caster = GetCaster())
@@ -1418,40 +1393,6 @@ class spell_frostwarden_handler_focus_fire : public SpellScriptLoader
         }
 };
 
-class spell_trigger_spell_from_caster : public SpellScriptLoader
-{
-    public:
-        spell_trigger_spell_from_caster(char const* scriptName, uint32 _triggerId) : SpellScriptLoader(scriptName), triggerId(_triggerId) { }
-
-        class spell_trigger_spell_from_caster_SpellScript : public SpellScript
-        {
-            PrepareSpellScript(spell_trigger_spell_from_caster_SpellScript);
-
-        public:
-            spell_trigger_spell_from_caster_SpellScript(uint32 _triggerId) : SpellScript(), triggerId(_triggerId) { }
-
-            void HandleTrigger()
-            {
-                GetCaster()->CastSpell(GetHitUnit(), triggerId, true);
-            }
-
-            void Register()
-            {
-                AfterHit += SpellHitFn(spell_trigger_spell_from_caster_SpellScript::HandleTrigger);
-            }
-
-            uint32 triggerId;
-        };
-
-        SpellScript* GetSpellScript() const
-        {
-            return new spell_trigger_spell_from_caster_SpellScript(triggerId);
-        }
-
-    private:
-        uint32 triggerId;
-};
-
 class at_sindragosa_lair : public AreaTriggerScript
 {
     public:
@@ -1471,6 +1412,9 @@ class at_sindragosa_lair : public AreaTriggerScript
 
                 if (!instance->GetData(DATA_SINDRAGOSA_FROSTWYRMS) && instance->GetBossState(DATA_SINDRAGOSA) != DONE)
                 {
+                    if (player->GetMap()->IsHeroic() && !instance->GetData(DATA_HEROIC_ATTEMPTS))
+                        return true;
+
                     player->GetMap()->LoadGrid(SindragosaSpawnPos.GetPositionX(), SindragosaSpawnPos.GetPositionY());
                     if (Creature* sindragosa = player->GetMap()->SummonCreature(NPC_SINDRAGOSA, SindragosaSpawnPos))
                     {

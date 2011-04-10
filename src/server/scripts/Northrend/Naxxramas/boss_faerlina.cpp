@@ -142,7 +142,7 @@ public:
                         events.ScheduleEvent(EVENT_POISON, urand(8000,15000));
                         break;
                     case EVENT_FIRE:
-                        if (Unit *pTarget = SelectUnit(SELECT_TARGET_RANDOM, 0))
+                        if (Unit *pTarget = SelectTarget(SELECT_TARGET_RANDOM, 0))
                             DoCast(pTarget, RAID_MODE(SPELL_RAIN_OF_FIRE, H_SPELL_RAIN_OF_FIRE));
                         events.ScheduleEvent(EVENT_FIRE, urand(6000,18000));
                         break;
@@ -175,7 +175,6 @@ public:
 
 };
 
-
 class mob_faerlina_add : public CreatureScript
 {
 public:
@@ -197,7 +196,7 @@ public:
 
         void Reset()
         {
-            if (getDifficulty() == RAID_DIFFICULTY_10MAN_NORMAL) {
+            if (GetDifficulty() == RAID_DIFFICULTY_10MAN_NORMAL) {
                 me->ApplySpellImmune(0, IMMUNITY_MECHANIC, SPELL_EFFECT_BIND, true);
                 me->ApplySpellImmune(0, IMMUNITY_MECHANIC, MECHANIC_CHARM, true);
             }
@@ -205,7 +204,7 @@ public:
 
         void JustDied(Unit * /*killer*/)
         {
-            if (pInstance && getDifficulty() == RAID_DIFFICULTY_10MAN_NORMAL)
+            if (pInstance && GetDifficulty() == RAID_DIFFICULTY_10MAN_NORMAL)
             {
                 if (Creature *pFaerlina = pInstance->instance->GetCreature(pInstance->GetData64(DATA_FAERLINA)))
                     DoCast(pFaerlina, SPELL_WIDOWS_EMBRACE);
@@ -214,7 +213,6 @@ public:
     };
 
 };
-
 
 void AddSC_boss_faerlina()
 {

@@ -278,7 +278,7 @@ void GameObject::Update(uint32 diff)
                     // Arming Time for GAMEOBJECT_TYPE_TRAP (6)
                     GameObjectInfo const* goInfo = GetGOInfo();
                     // Bombs
-                    if (goInfo->trap.charges == 2)
+                    if (goInfo->trap.type == 2)
                         m_cooldownTime = time(NULL) + 10;   // Hardcoded tooltip value
                     else if (Unit* owner = GetOwner())
                     {
@@ -306,7 +306,7 @@ void GameObject::Update(uint32 diff)
                             udata.BuildPacket(&packet);
                             caster->ToPlayer()->GetSession()->SendPacket(&packet);
 
-                            SendCustomAnim();
+                            SendCustomAnim(GetGoAnimProgress());
                         }
 
                         m_lootState = GO_READY;                 // can be successfully open with some chance
@@ -393,7 +393,7 @@ void GameObject::Update(uint32 diff)
                         return;
 
                     // Type 2 - Bomb (will go away after casting it's spell)
-                    if (goInfo->trap.charges == 2)
+                    if (goInfo->trap.type == 2)
                     {
                         if (goInfo->trap.spellId)
                             CastSpell(NULL, goInfo->trap.spellId);  // FIXME: null target won't work for target type 1
@@ -451,9 +451,9 @@ void GameObject::Update(uint32 diff)
                         if (goInfo->trap.spellId)
                             CastSpell(ok, goInfo->trap.spellId);
 
-                        m_cooldownTime = time(NULL) + 4;        // 4 seconds
+                        m_cooldownTime = time(NULL) + goInfo->trap.cooldown ? goInfo->trap.cooldown :  uint32(4);   // template or 4 seconds
 
-                        if (owner)  // || goInfo->trap.charges == 1)
+                        if (goInfo->trap.type == 1)
                             SetLootState(GO_JUST_DEACTIVATED);
 
                         if (IsBattlegroundTrap && ok->GetTypeId() == TYPEID_PLAYER)
@@ -537,7 +537,11 @@ void GameObject::Update(uint32 diff)
                 SetGoState(GO_STATE_READY);
 
                 //any return here in case battleground traps
+                if (GetGOInfo()->flags & GO_FLAG_NODESPAWN)
+                    return;
             }
+
+            loot.clear();
 
             if (GetOwnerGUID())
             {
@@ -550,6 +554,8 @@ void GameObject::Update(uint32 diff)
                 return;
             }
 
+            SetLootState(GO_READY);
+
             //burning flags in some battlegrounds, if you find better condition, just add it
             if (GetGOInfo()->IsDespawnAtAction() || GetGoAnimProgress() > 0)
             {
@@ -557,9 +563,6 @@ void GameObject::Update(uint32 diff)
                 //reset flags
                 SetUInt32Value(GAMEOBJECT_FLAGS, GetGOInfo()->flags);
             }
-
-            loot.clear();
-            SetLootState(GO_READY);
 
             if (!m_respawnDelayTime)
                 return;
@@ -827,7 +830,6 @@ bool GameObject::IsDynTransport() const
     return gInfo->type == GAMEOBJECT_TYPE_MO_TRANSPORT || (gInfo->type == GAMEOBJECT_TYPE_TRANSPORT && !gInfo->transport.pause);
 }
 
-
 Unit* GameObject::GetOwner() const
 {
     return ObjectAccessor::GetUnit(*this, GetOwnerGUID());
@@ -1048,7 +1050,16 @@ void GameObject::Use(Unit* user)
         AI()->GossipHello(playerUser);
     }
 
-    switch(GetGoType())
+    // If cooldown data present in template
+    if (uint32 cooldown = GetGOInfo()->GetCooldown())
+    {
+        if (m_cooldownTime > sWorld->GetGameTime())
+            return;
+
+        m_cooldownTime = sWorld->GetGameTime() + cooldown;
+    }
+
+    switch (GetGoType())
     {
         case GAMEOBJECT_TYPE_DOOR:                          //0
         case GAMEOBJECT_TYPE_BUTTON:                        //1
@@ -1212,7 +1223,7 @@ void GameObject::Use(Unit* user)
 
             // this appear to be ok, however others exist in addition to this that should have custom (ex: 190510, 188692, 187389)
             if (time_to_restore && info->goober.customAnim)
-                SendCustomAnim();
+                SendCustomAnim(GetGoAnimProgress());
             else
                 SetGoState(GO_STATE_ACTIVE);
 
@@ -1637,11 +1648,11 @@ void GameObject::CastSpell(Unit* target, uint32 spellId)
     //trigger->RemoveCorpse();
 }
 
-void GameObject::SendCustomAnim()
+void GameObject::SendCustomAnim(uint32 anim)
 {
     WorldPacket data(SMSG_GAMEOBJECT_CUSTOM_ANIM,8+4);
     data << GetGUID();
-    data << uint32(GetGoAnimProgress());
+    data << uint32(anim);
     SendMessageToSet(&data, true);
 }
 
@@ -1691,15 +1702,20 @@ void GameObject::TakenDamage(uint32 damage, Unit *who)
         if (!m_goValue->building.health)
         {
             RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED);
-
             SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_DESTROYED);
-            SetUInt32Value(GAMEOBJECT_DISPLAYID, m_goInfo->building.destroyedDisplayId);
+
+            uint32 modelId = m_goInfo->building.destroyedDisplayId;
+            if (DestructibleModelDataEntry const* modelData = sDestructibleModelDataStore.LookupEntry(m_goInfo->building.destructibleData))
+                if (modelData->DestroyedDisplayId)
+                    modelId = modelData->DestroyedDisplayId;
+            SetUInt32Value(GAMEOBJECT_DISPLAYID, modelId);
+
             EventInform(m_goInfo->building.destroyedEvent);
             if (pwho)
                 if (Battleground* bg = pwho->GetBattleground())
                     bg->DestroyGate(pwho, this, m_goInfo->building.destroyedEvent);
             hitType = BG_OBJECT_DMG_HIT_TYPE_JUST_DESTROYED;
-            sScriptMgr->OnGameObjectDestroyed(pwho, this, m_goInfo->building.destroyedEvent);
+            sScriptMgr->OnGameObjectDestroyed(this, pwho, m_goInfo->building.destroyedEvent);
         }
         if (pwho)
             if (Battleground* bg = pwho->GetBattleground())
@@ -1719,8 +1735,15 @@ void GameObject::TakenDamage(uint32 damage, Unit *who)
                 m_goValue->building.health = 1;
 
             SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED);
-            SetUInt32Value(GAMEOBJECT_DISPLAYID, m_goInfo->building.damagedDisplayId);
+
+            uint32 modelId = m_goInfo->building.damagedDisplayId;
+            if (DestructibleModelDataEntry const* modelData = sDestructibleModelDataStore.LookupEntry(m_goInfo->building.destructibleData))
+                if (modelData->DamagedDisplayId)
+                    modelId = modelData->DamagedDisplayId;
+            SetUInt32Value(GAMEOBJECT_DISPLAYID, modelId);
+
             EventInform(m_goInfo->building.damagedEvent);
+            sScriptMgr->OnGameObjectDamaged(this, pwho, m_goInfo->building.damagedEvent);
             hitType = BG_OBJECT_DMG_HIT_TYPE_JUST_HIGH_DAMAGED;
         }
         if (pwho)
@@ -1732,7 +1755,7 @@ void GameObject::TakenDamage(uint32 damage, Unit *who)
 
 void GameObject::Rebuild()
 {
-    RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED + GO_FLAG_DESTROYED);
+    RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED | GO_FLAG_DESTROYED);
     SetUInt32Value(GAMEOBJECT_DISPLAYID, m_goInfo->displayId);
     m_goValue->building.health = m_goInfo->building.intactNumHits + m_goInfo->building.damagedNumHits;
     EventInform(m_goInfo->building.rebuildingEvent);

@@ -21,7 +21,6 @@
 #include "World.h"
 #include "WorldPacket.h"
 
-
 #include "ArenaTeam.h"
 #include "BattlegroundMgr.h"
 #include "BattlegroundAV.h"
@@ -110,6 +109,7 @@ void BattlegroundMgr::Update(uint32 diff)
                 m_Battlegrounds[i].erase(itr);
                 if (!m_ClientBattlegroundIds[i][bg->GetBracketId()].empty())
                     m_ClientBattlegroundIds[i][bg->GetBracketId()].erase(bg->GetClientInstanceID());
+
                 delete bg;
             }
         }
@@ -603,7 +603,10 @@ Battleground * BattlegroundMgr::CreateNewBattleground(BattlegroundTypeId bgTypeI
     bg->SetBracket(bracketEntry);
 
     // generate a new instance id
-    bg->SetInstanceID(sMapMgr->GenerateInstanceId()); // set instance id
+    uint32 instanceId = sMapMgr->GenerateInstanceId();
+    // set instance id
+    bg->SetInstanceID(instanceId);
+
     bg->SetClientInstanceID(CreateClientVisibleInstanceId(isRandom ? BATTLEGROUND_RB : bgTypeId, bracketEntry->GetBracketId()));
 
     // reset the new bg (set status to status_wait_queue from status_none)
@@ -1162,6 +1165,7 @@ HolidayIds BattlegroundMgr::BGTypeToWeekendHolidayId(BattlegroundTypeId bgTypeId
         case BATTLEGROUND_WS: return HOLIDAY_CALL_TO_ARMS_WS;
         case BATTLEGROUND_SA: return HOLIDAY_CALL_TO_ARMS_SA;
         case BATTLEGROUND_AB: return HOLIDAY_CALL_TO_ARMS_AB;
+        case BATTLEGROUND_IC: return HOLIDAY_CALL_TO_ARMS_IC;
         default: return HOLIDAY_NONE;
     }
 }
@@ -1175,6 +1179,7 @@ BattlegroundTypeId BattlegroundMgr::WeekendHolidayIdToBGType(HolidayIds holiday)
         case HOLIDAY_CALL_TO_ARMS_WS: return BATTLEGROUND_WS;
         case HOLIDAY_CALL_TO_ARMS_SA: return BATTLEGROUND_SA;
         case HOLIDAY_CALL_TO_ARMS_AB: return BATTLEGROUND_AB;
+        case HOLIDAY_CALL_TO_ARMS_IC: return BATTLEGROUND_IC;
         default: return BATTLEGROUND_TYPE_NONE;
     }
 }

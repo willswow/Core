@@ -137,7 +137,7 @@ public:
 
             if (Saw_Blade_Timer <= diff)
             {
-                if (Unit *pTarget = SelectUnit(SELECT_TARGET_RANDOM,1))
+                if (Unit *pTarget = SelectTarget(SELECT_TARGET_RANDOM,1))
                     DoCast(pTarget, SPELL_SAW_BLADE);
                 else
                     DoCast(me->getVictim(), SPELL_SAW_BLADE);
@@ -184,7 +184,6 @@ public:
     };
 
 };
-
 
 #define SPELL_DISPEL_MAGIC          17201
 #define SPELL_REPAIR                31532
@@ -263,7 +262,6 @@ public:
     };
 
 };
-
 
 void AddSC_boss_mekgineer_steamrigger()
 {

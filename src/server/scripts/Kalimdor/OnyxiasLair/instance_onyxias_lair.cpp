@@ -37,7 +37,7 @@ public:
 
     struct instance_onyxias_lair_InstanceMapScript : public InstanceScript
     {
-        instance_onyxias_lair_InstanceMapScript(Map* pMap) : InstanceScript(pMap) {Initialize();};
+        instance_onyxias_lair_InstanceMapScript(Map* pMap) : InstanceScript(pMap) {}
 
         //Eruption is a BFS graph problem
         //One map to remember all floor, one map to keep floor that still need to erupt and one queue to know what needs to be removed
@@ -114,7 +114,7 @@ public:
             {
                 //THIS GOB IS A TRAP - What shall i do? =(
                 //Cast it spell? Copyed Heigan method
-                pFloorEruption->SendCustomAnim();
+                pFloorEruption->SendCustomAnim(pFloorEruption->GetGoAnimProgress());
                 pFloorEruption->CastSpell(NULL, Difficulty(instance->GetSpawnMode()) == RAID_DIFFICULTY_10MAN_NORMAL ? 17731 : 69294); //pFloorEruption->GetGOInfo()->trap.spellId
 
                 //Get all immediatly nearby floors
@@ -252,7 +252,6 @@ public:
     };
 
 };
-
 
 void AddSC_instance_onyxias_lair()
 {

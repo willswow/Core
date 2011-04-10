@@ -3448,14 +3448,17 @@ void AuraEffect::HandleAuraCloneCaster(AuraApplication const * aurApp, uint8 mod
     if (apply)
     {
         Unit * caster = GetCaster();
-        if (!caster)
+        if (!caster || caster == target)
             return;
-        // Set display id (probably for portrait?)
+        // What must be cloned? at least display and scale
         target->SetDisplayId(caster->GetDisplayId());
+        target->SetCreatorGUID(caster->GetGUID());
+        //target->SetFloatValue(OBJECT_FIELD_SCALE_X, caster->GetFloatValue(OBJECT_FIELD_SCALE_X)); // we need retail info about how scaling is handled (aura maybe?)
         target->SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_MIRROR_IMAGE);
     }
     else
     {
+        target->SetCreatorGUID(0);
         target->SetDisplayId(target->GetNativeDisplayId());
         target->RemoveFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_MIRROR_IMAGE);
     }
@@ -4269,7 +4272,7 @@ void AuraEffect::HandleAuraControlVehicle(AuraApplication const * aurApp, uint8 
 
     if (apply)
     {
-        caster->EnterVehicle(target->GetVehicleKit(), m_amount - 1, aurApp);
+        caster->_EnterVehicle(target->GetVehicleKit(), m_amount - 1, aurApp);
     }
     else
     {
@@ -4282,7 +4285,7 @@ void AuraEffect::HandleAuraControlVehicle(AuraApplication const * aurApp, uint8 
 
         // some SPELL_AURA_CONTROL_VEHICLE auras have a dummy effect on the player - remove them
         caster->RemoveAurasDueToSpell(GetId());
-        caster->ExitVehicle();
+        caster->_ExitVehicle();
     }
 }
 
@@ -6418,7 +6421,6 @@ void AuraEffect::HandleAuraModFaction(AuraApplication const * aurApp, uint8 mode
     }
 }
 
-
 void AuraEffect::HandleComprehendLanguage(AuraApplication const * aurApp, uint8 mode, bool apply) const
 {
     if (!(mode & AURA_EFFECT_HANDLE_SEND_FOR_CLIENT_MASK))
@@ -6594,7 +6596,7 @@ void AuraEffect::HandleAuraSetVehicle(AuraApplication const * aurApp, uint8 mode
 
     if (apply)
     {
-        if (!target->CreateVehicleKit(vehicleId))
+        if (!target->CreateVehicleKit(vehicleId, 0))
             return;
     }
     else if (target->GetVehicleKit())

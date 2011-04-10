@@ -114,7 +114,6 @@ class boss_nethermancer_sepethrea : public CreatureScript
                 if (!UpdateVictim())
                     return;
 
-
                 //Frost Attack
                 if (frost_attack_Timer <= diff)
                 {
@@ -234,7 +233,7 @@ class mob_ragin_flames : public CreatureScript
 
                     if (!onlyonce)
                     {
-                        if (Unit *pTarget = SelectUnit(SELECT_TARGET_RANDOM,0))
+                        if (Unit *pTarget = SelectTarget(SELECT_TARGET_RANDOM,0))
                             me->GetMotionMaster()->MoveChase(pTarget);
                         onlyonce = true;
                     }

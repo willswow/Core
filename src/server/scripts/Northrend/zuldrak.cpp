@@ -102,7 +102,6 @@ public:
         }
     };
 
-
     CreatureAI *GetAI(Creature *creature) const
     {
         return new npc_drakuru_shacklesAI(creature);
@@ -647,7 +646,7 @@ public:
 
             if (uiFishyScentTimer <= uiDiff)
             {
-                if (Unit *pAffected = SelectUnit(SELECT_TARGET_RANDOM,0))
+                if (Unit *pAffected = SelectTarget(SELECT_TARGET_RANDOM,0))
                 {
                     DoCast(pAffected, SPELL_FISHY_SCENT);
                     AffectedGUID = pAffected->GetGUID();
@@ -768,14 +767,14 @@ public:
 
             if (uiUppercutTimer <= uiDiff)
             {
-                if (Unit* pTarget = SelectUnit(SELECT_TARGET_NEAREST, 0))
+                if (Unit* pTarget = SelectTarget(SELECT_TARGET_NEAREST, 0))
                     DoCast(pTarget, SPELL_UPPERCUT);
                 uiUppercutTimer = 12000;
             } else uiUppercutTimer -= uiDiff;
 
             if (uiChargeTimer <= uiDiff)
             {
-                if (Unit* pTarget = SelectUnit(SELECT_TARGET_FARTHEST, 0))
+                if (Unit* pTarget = SelectTarget(SELECT_TARGET_FARTHEST, 0))
                     DoCast(pTarget, SPELL_CHARGE);
                 uiChargeTimer = 15000;
             } else uiChargeTimer -= uiDiff;
@@ -875,7 +874,6 @@ public:
                 std::string sText = (std::string(pKiller->GetName()) + " has defeated Yg.. Yggg-really big worm!");
                 pSummoner->MonsterYell(sText.c_str(),LANG_UNIVERSAL,0);
             }
-
 
             if (Player* pPlayer = pKiller->GetCharmerOrOwnerPlayerOrPlayerItself())
             {
@@ -985,7 +983,7 @@ public:
 
             if (uiKnockAwayTimer <= uiDiff)
             {
-                if (Unit* pTarget = SelectUnit(SELECT_TARGET_RANDOM, 0))
+                if (Unit* pTarget = SelectTarget(SELECT_TARGET_RANDOM, 0))
                 {
                     if (pTarget && pTarget->isAlive())
                         DoCast(pTarget, SPELL_KNOCK_AWAY);
@@ -995,7 +993,7 @@ public:
 
             if (uiStinkyBeardTimer <= uiDiff)
             {
-                if (Unit* pTarget = SelectUnit(SELECT_TARGET_RANDOM, 0))
+                if (Unit* pTarget = SelectTarget(SELECT_TARGET_RANDOM, 0))
                 {
                     if (pTarget && pTarget->isAlive())
                         DoCast(pTarget, SPELL_STINKY_BEARD);

@@ -38,7 +38,7 @@ public:
 
     struct instance_oculus_InstanceMapScript : public InstanceScript
     {
-        instance_oculus_InstanceMapScript(Map* pMap) : InstanceScript(pMap) {Initialize();};
+        instance_oculus_InstanceMapScript(Map* pMap) : InstanceScript(pMap) {}
 
         void Initialize()
         {
@@ -79,6 +79,10 @@ public:
                 player->SendUpdateWorldState(WORLD_STATE_CENTRIFUGE_CONSTRUCT_SHOW,0);
                 player->SendUpdateWorldState(WORLD_STATE_CENTRIFUGE_CONSTRUCT_AMOUNT,0);
             }
+        }
+
+        void ProcessEvent(GameObject* /*go*/, uint32 /*eventId*/)
+        {
         }
 
         void ProcessEvent(Unit* /*unit*/, uint32 eventId)
@@ -227,7 +231,6 @@ public:
 
             char dataHead1, dataHead2;
 
-
             std::istringstream loadStream(in);
             loadStream >> dataHead1 >> dataHead2;
 
@@ -261,7 +264,6 @@ public:
     };
 
 };
-
 
 void AddSC_instance_oculus()
 {

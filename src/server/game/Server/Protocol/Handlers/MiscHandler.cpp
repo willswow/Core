@@ -1658,7 +1658,6 @@ void WorldSession::HandleMoveSetCanFlyAckOpcode(WorldPacket & recv_data)
     uint64 guid;                                            // guid - unused
     recv_data.readPackGUID(guid);
 
-
     recv_data.read_skip<uint32>();                          // unk
 
     MovementInfo movementInfo;
@@ -1728,7 +1727,7 @@ void WorldSession::HandleHearthAndResurrect(WorldPacket& /*recv_data*/)
     if (_player->isInFlight())
         return;
 
-    AreaTableEntry const *atEntry = sAreaStore.LookupEntry(_player->GetAreaId());
+    AreaTableEntry const *atEntry = GetAreaEntryByAreaID(_player->GetAreaId());
     if (!atEntry || !(atEntry->flags & AREA_FLAG_OUTDOOR_PVP2))
         return;
 

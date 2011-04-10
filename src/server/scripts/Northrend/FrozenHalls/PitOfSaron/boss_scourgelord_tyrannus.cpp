@@ -301,7 +301,7 @@ class boss_rimefang : public CreatureScript
 
             void JustReachedHome()
             {
-                _vehicle->InstallAllAccessories(me->GetEntry());
+                _vehicle->InstallAllAccessories();
             }
 
             void DoAction(const int32 actionId)
@@ -345,7 +345,7 @@ class boss_rimefang : public CreatureScript
                             _events.ScheduleEvent(EVENT_MOVE_NEXT, 2000, 0, PHASE_COMBAT);
                             break;
                         case EVENT_ICY_BLAST:
-                            if (Unit* target = SelectUnit(SELECT_TARGET_RANDOM, 0))
+                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0))
                                 DoCast(target, SPELL_ICY_BLAST);
                             _events.ScheduleEvent(EVENT_ICY_BLAST, 15000, 0, PHASE_COMBAT);
                             break;
